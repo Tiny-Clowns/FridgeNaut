@@ -1,0 +1,36 @@
+name: codeql
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL (C#)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Build solution
+        working-directory: project
+        run: dotnet build FridgeNaut.sln -c Release
+
+      - uses: github/codeql-action/analyze@v3
