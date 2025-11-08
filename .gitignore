@@ -1,0 +1,94 @@
+# ===== OS cruft =====
+.DS_Store
+Thumbs.db
+
+# ===== Git noise =====
+.gitattributes.lock
+*.orig
+
+# ===== IDE/editor =====
+.vscode/
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.ReSharper*/
+*_ReSharper.*
+*.DotSettings.user
+*.iml
+
+# ===== Logs =====
+*.log
+logs/
+**/logs/
+
+# ===== .NET / Visual Studio =====
+**/bin/
+**/obj/
+**/TestResults/
+**/packages/
+*.nupkg
+
+# ASP.NET Core config (commit base appsettings.json; ignore local/dev)
+appsettings.*.Local.json
+appsettings.Development.json
+secrets.json
+
+# EF Core
+# Migrations are code; keep them committed (no ignore here)
+
+# SQL Server local DB files
+*.mdf
+*.ldf
+
+# ===== Docker / env =====
+.env
+.env.*.local
+**/docker-compose.override.yml
+
+# ===== Flutter / Dart =====
+.dart_tool/
+.packages
+.pub-cache/
+flutter_export_environment.sh
+
+# Build outputs (Flutter, Android, Web)
+**/build/
+
+# Generated plugin registrants and plugin maps
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Keep pubspec.lock for Flutter apps
+#! pubspec.lock
+
+# ===== Android =====
+**/android/.gradle/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+**/*.keystore
+**/*.jks
+
+# ===== iOS / macOS (Flutter) =====
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/Podfile.lock
+**/macos/Flutter/ephemeral/
+**/macos/Pods/
+**/macos/Podfile.lock
+**/Runner.xcworkspace/xcuserdata/
+**/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+**/DerivedData/
+
+# ===== Coverage =====
+coverage/
+lcov.info
+
+# ===== CI artifacts =====
+gitleaks.sarif
