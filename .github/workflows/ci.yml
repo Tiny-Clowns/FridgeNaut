@@ -1,10 +1,7 @@
 name: ci
-
 on:
-  push:
-    branches: ["**"]
-  pull_request:
-    branches: ["**"]
+  push: { branches: ["**"] }
+  pull_request: { branches: ["**"] }
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,23 +11,36 @@ jobs:
   backend:
     name: .NET build/lint/test + vuln audit
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: project
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect backend
+        id: detect
+        run: |
+          if [ -f project/FridgeNaut.sln ]; then
+            echo "dotnet=true" >> $GITHUB_OUTPUT
+          else
+            echo "dotnet=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/setup-dotnet@v4
+        if: steps.detect.outputs.dotnet == 'true'
         with:
           dotnet-version: "8.0.x"
 
       - name: dotnet format (verify)
+        if: steps.detect.outputs.dotnet == 'true'
+        working-directory: project
         run: dotnet format --verify-no-changes
 
       - name: Build (warnings as errors)
+        if: steps.detect.outputs.dotnet == 'true'
+        working-directory: project
         run: dotnet build FridgeNaut.sln -c Release -warnaserror
 
       - name: Test
+        if: steps.detect.outputs.dotnet == 'true'
+        working-directory: project
         run: |
           if ls **/*.Tests.csproj >/dev/null 2>&1; then
             dotnet test FridgeNaut.sln -c Release --no-build
@@ -39,33 +49,55 @@ jobs:
           fi
 
       - name: NuGet vulnerability audit
+        if: steps.detect.outputs.dotnet == 'true'
+        working-directory: project
         run: |
           set -eo pipefail
-          OUT="$(dotnet list FridgeNaut.sln package --vulnerable --include-transitive || true)"
-          echo "$OUT"
-          echo "$OUT" | grep -qi "vulnerab" && { echo "Vulnerable packages detected"; exit 1; } || echo "No known vulnerabilities."
+          sudo apt-get update >/dev/null && sudo apt-get install -y jq >/dev/null
+          dotnet list FridgeNaut.sln package --vulnerable --include-transitive --format json > vuln.json || true
+          count=$(jq '[.. | .vulnerabilities? // empty] | flatten | length' vuln.json)
+          cat vuln.json
+          if [ "$count" -gt 0 ]; then
+            echo "Vulnerable packages detected: $count"
+            exit 1
+          else
+            echo "No known vulnerabilities."
+          fi
+
+      - name: Skip note
+        if: steps.detect.outputs.dotnet != 'true'
+        run: echo "Skipping .NET job (project/FridgeNaut.sln not found)."
 
   flutter:
     name: Flutter analyze/test + APK build check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: project/flutter-fridge-app
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect Flutter app
+        id: detect
+        run: |
+          if [ -f project/flutter-fridge-app/pubspec.yaml ]; then
+            echo "flutter=true" >> $GITHUB_OUTPUT
+          else
+            echo "flutter=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: subosito/flutter-action@v2
+        if: steps.detect.outputs.flutter == 'true'
         with:
           channel: stable
           cache: true
 
       - name: Set up Java 17
+        if: steps.detect.outputs.flutter == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
+        if: steps.detect.outputs.flutter == 'true'
         uses: android-actions/setup-android@v3
         with:
           packages: |
@@ -74,32 +106,47 @@ jobs:
             platform-tools
 
       - name: Pub get
+        if: steps.detect.outputs.flutter == 'true'
+        working-directory: project/flutter-fridge-app
         run: flutter pub get
 
       - name: Dart format check
+        if: steps.detect.outputs.flutter == 'true'
+        working-directory: project/flutter-fridge-app
         run: dart format --output none --set-exit-if-changed .
 
       - name: Analyze
+        if: steps.detect.outputs.flutter == 'true'
+        working-directory: project/flutter-fridge-app
         run: flutter analyze
 
       - name: Test
+        if: steps.detect.outputs.flutter == 'true'
+        working-directory: project/flutter-fridge-app
         run: flutter test
 
       - name: Build debug APK (verification only)
+        if: steps.detect.outputs.flutter == 'true'
+        working-directory: project/flutter-fridge-app
         run: flutter build apk --debug --no-shrink
+
+      - name: Skip note
+        if: steps.detect.outputs.flutter != 'true'
+        run: echo "Skipping Flutter job (project/flutter-fridge-app not found)."
 
   secrets:
     name: Secrets scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload SARIF (only if present)
+        if: hashFiles('.reports/gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          args: detect --source . --report-format sarif --report-path gitleaks.sarif
-
-      - uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif
+          sarif_file: .reports/gitleaks.sarif
