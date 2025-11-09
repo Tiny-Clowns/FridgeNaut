@@ -67,4 +67,30 @@ public class ItemsController : ControllerBase
         if (!DateTime.TryParse(isoUtc, out var ts)) return BadRequest("invalid timestamp");
         return await _db.Items.Where(i => i.UpdatedAt >= ts).ToListAsync();
     }
+
+    // add at bottom of ItemsController
+    [HttpGet("alerts")]
+    public async Task<object> Alerts([FromQuery] int days = 3, [FromQuery] double? threshold = null)
+    {
+        var now = DateTime.UtcNow;
+        var soon = now.AddDays(days);
+
+        var q = _db.Items.AsQueryable();
+
+        // Low stock: quantity <= threshold (per-item LowThreshold if none supplied)
+        var low = await q.Where(i => i.Quantity <= (threshold ?? i.LowThreshold))
+                        .OrderBy(i => i.Quantity).ToListAsync();
+
+        // Expiring soon
+        var expSoon = await q.Where(i => i.ExpirationDate != null && i.ExpirationDate <= soon)
+                            .OrderBy(i => i.ExpirationDate).ToListAsync();
+
+        // Out of stock
+        var outOfStock = await q.Where(i => i.Quantity <= 0).OrderBy(i => i.Name).ToListAsync();
+
+        // Planned to buy
+        var toBuy = await q.Where(i => i.ToBuy).OrderBy(i => i.Name).ToListAsync();
+
+        return new { low, expSoon, outOfStock, toBuy, now };
+    }
 }

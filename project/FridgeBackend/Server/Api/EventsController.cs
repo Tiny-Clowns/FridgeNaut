@@ -42,4 +42,25 @@ public class EventsController : ControllerBase
         if (start != null && DateTime.TryParse(start, out var parsed)) s = parsed;
         return await _reports.SummaryAsync(range, s);
     }
+
+    // add inside EventsController
+    [HttpPost("batch")]
+    public async Task<ActionResult<int>> CreateBatch(List<InventoryEvent> events)
+    {
+        foreach (var e in events)
+        {
+            e.Id = e.Id == Guid.Empty ? Guid.NewGuid() : e.Id;
+            e.CreatedAt = e.CreatedAt == default ? DateTime.UtcNow : e.CreatedAt;
+            _db.Events.Add(e);
+
+            var item = await _db.Items.FindAsync(e.ItemId);
+            if (item != null)
+            {
+                item.Quantity += e.DeltaQuantity;
+                item.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+        var count = await _db.SaveChangesAsync();
+        return count;
+    }
 }

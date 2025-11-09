@@ -16,4 +16,5 @@ public class Item
     public bool NotifyOnExpire { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public double LowThreshold { get; set; } = 1;
 }
