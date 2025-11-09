@@ -1,0 +1,135 @@
+name: "Project: In Progress on feature/fix/hotfix branch"
+on:
+  create:
+    branches: ["feature/**", "fix/**", "hotfix/**"]
+  push:
+    branches: ["feature/**", "fix/**", "hotfix/**"]
+
+jobs:
+  move_in_progress:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      repository-projects: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const projectNumber = 3;
+
+            async function getProject() {
+              const r = await github.graphql(`
+                query($owner:String!,$number:Int!){
+                  user(login:$owner){
+                    projectV2(number:$number){
+                      id
+                      fields(first:50){
+                        nodes{
+                          ... on ProjectV2SingleSelectField {
+                            id name
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`, { owner, number: projectNumber });
+              return r.user.projectV2;
+            }
+
+            function extractIssueNums() {
+              const out = new Set();
+              const ref = (context.payload.ref || context.ref || "").replace(/^refs\/heads\//,"");
+              for (const m of ref.matchAll(/(?:^|[\/\-_#])(?:issue-)?(\d{1,7})(?=[\/\-_]|$)/ig)) out.add(parseInt(m[1],10));
+              if (context.eventName === "push") {
+                for (const c of (context.payload.commits || [])) {
+                  const msg = c.message || "";
+                  for (const m of msg.matchAll(/#(\d{1,7})/g)) out.add(parseInt(m[1],10));
+                }
+              }
+              return [...out];
+            }
+
+            async function getIssueId(num) {
+              const q = await github.graphql(`
+                query($owner:String!,$repo:String!,$num:Int!){
+                  repository(owner:$owner, name:$repo){
+                    issue(number:$num){ id }
+                  }
+                }`, { owner, repo, num }).catch(() => null);
+              return q?.repository?.issue?.id || null;
+            }
+
+            async function addItem(projectId, issueId) {
+              const res = await github.graphql(`
+                mutation($projectId:ID!,$contentId:ID!){
+                  addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) {
+                    item { id }
+                  }
+                }`, { projectId, contentId: issueId }).catch(() => null);
+              return res?.addProjectV2ItemById?.item?.id || null;
+            }
+
+            async function getStatusName(itemId) {
+              const q = await github.graphql(`
+                query($id:ID!){
+                  node(id:$id){
+                    ... on ProjectV2Item {
+                      fieldValues(first:50){
+                        nodes{
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field { ... on ProjectV2SingleSelectField { name id } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`, { id: itemId });
+              const vals = q.node.fieldValues.nodes || [];
+              const st = vals.find(v => v.field?.name === "Status");
+              return st?.name || null;
+            }
+
+            async function setStatus(projectId, itemId, fieldId, optionId) {
+              await github.graphql(`
+                mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!){
+                  updateProjectV2ItemFieldValue(input:{
+                    projectId:$projectId,
+                    itemId:$itemId,
+                    fieldId:$fieldId,
+                    value:{ singleSelectOptionId:$optionId }
+                  }) { clientMutationId }
+                }`, { projectId, itemId, fieldId, optionId });
+            }
+
+            const nums = extractIssueNums();
+            if (!nums.length) { core.info("No issue refs"); return; }
+
+            const project = await getProject();
+            const statusField = project.fields.nodes.find(f => f?.name === "Status");
+            const todoOpt   = statusField?.options.find(o => /^todo$/i.test(o.name));
+            const inProgOpt = statusField?.options.find(o => /in progress/i.test(o.name));
+            if (!statusField || !todoOpt || !inProgOpt) {
+              core.setFailed("Missing Status options (Todo/In Progress)");
+              return;
+            }
+
+            for (const n of nums) {
+              const issueId = await getIssueId(n);
+              if (!issueId) continue;
+
+              const itemId = await addItem(project.id, issueId);
+              if (!itemId) continue;
+
+              const current = await getStatusName(itemId);
+              if (current && !/^todo$/i.test(current)) { core.info(`Issue #${n} in '${current}', skip`); continue; }
+
+              await setStatus(project.id, itemId, statusField.id, inProgOpt.id);
+              core.info(`Issue #${n} → In Progress`);
+            }

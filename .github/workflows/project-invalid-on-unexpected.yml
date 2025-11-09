@@ -1,0 +1,130 @@
+name: "Project: mark Invalid when commits reference Backlog issues"
+on:
+  push:
+    branches: ["**"] # all branches
+
+jobs:
+  mark_invalid:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      repository-projects: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const projectNumber = 3;
+
+            // 1) Collect referenced issue numbers from commit messages
+            const issueNums = new Set();
+            for (const c of (context.payload.commits || [])) {
+              const msg = c.message || "";
+              for (const m of msg.matchAll(/#(\d{1,7})/g)) issueNums.add(parseInt(m[1],10));
+            }
+            if (!issueNums.size) { core.info("No issue refs in commits"); return; }
+
+            // 2) Load Project + Status field + option ids
+            const projQ = await github.graphql(`
+              query($owner:String!,$number:Int!){
+                user(login:$owner){
+                  projectV2(number:$number){
+                    id
+                    fields(first:50){
+                      nodes{
+                        ... on ProjectV2SingleSelectField {
+                          id name
+                          options { id name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`, { owner, number: projectNumber });
+
+            const project = projQ.user?.projectV2;
+            if (!project) { core.setFailed("Project not found"); return; }
+
+            const statusField = project.fields.nodes.find(f => f?.name === "Status");
+            if (!statusField) { core.setFailed("Status field not found"); return; }
+
+            const backlogOpt = statusField.options.find(o => /backlog/i.test(o.name));
+            const invalidOpt = statusField.options.find(o => /invalid/i.test(o.name));
+            if (!backlogOpt || !invalidOpt) { core.setFailed("Need 'Backlog' and 'Invalid' status options"); return; }
+
+            // helpers
+            async function getIssueId(num){
+              const r = await github.graphql(`
+                query($owner:String!,$repo:String!,$num:Int!){
+                  repository(owner:$owner, name:$repo){
+                    issue(number:$num){ id }
+                  }
+                }`, { owner, repo, num }).catch(() => null);
+              return r?.repository?.issue?.id || null;
+            }
+
+            async function addOrGetItemId(projectId, issueId){
+              const add = await github.graphql(`
+                mutation($projectId:ID!,$contentId:ID!){
+                  addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) {
+                    item { id }
+                  }
+                }`, { projectId, contentId: issueId }).catch(() => null);
+              return add?.addProjectV2ItemById?.item?.id || null;
+            }
+
+            async function getStatusName(itemId){
+              const q = await github.graphql(`
+                query($id:ID!){
+                  node(id:$id){
+                    ... on ProjectV2Item {
+                      fieldValues(first:50){
+                        nodes{
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field { ... on ProjectV2SingleSelectField { name id } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`, { id: itemId });
+              const vals = q.node.fieldValues.nodes || [];
+              const st = vals.find(v => v.field?.name === "Status");
+              return st?.name || null;
+            }
+
+            async function setStatus(projectId, itemId, fieldId, optionId){
+              await github.graphql(`
+                mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!){
+                  updateProjectV2ItemFieldValue(input:{
+                    projectId:$projectId,
+                    itemId:$itemId,
+                    fieldId:$fieldId,
+                    value:{ singleSelectOptionId:$optionId }
+                  }) { clientMutationId }
+                }`, { projectId, itemId, fieldId, optionId });
+            }
+
+            // 3) For each referenced issue: if Status==Backlog -> set to Invalid
+            for (const n of issueNums) {
+              const issueId = await getIssueId(n);
+              if (!issueId) { core.info(`Issue #${n} not found`); continue; }
+
+              const itemId = await addOrGetItemId(project.id, issueId);
+              if (!itemId) { core.info(`Project item for #${n} not found`); continue; }
+
+              const current = await getStatusName(itemId);
+              if (!current) { core.info(`Status missing for #${n}`); continue; }
+
+              if (/^backlog$/i.test(current)) {
+                await setStatus(project.id, itemId, statusField.id, invalidOpt.id);
+                core.info(`#${n} → Invalid (commit referenced while in Backlog)`);
+              } else {
+                core.info(`#${n} is '${current}', leaving unchanged`);
+              }
+            }
