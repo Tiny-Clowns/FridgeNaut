@@ -7,44 +7,92 @@ class SyncManager {
   final Repo repo;
   SyncManager(this.repo);
 
+  Future<List<ConnectivityResult>> _current() async {
+    final r = await Connectivity().checkConnectivity();
+    return r;
+  }
+
+  Future<bool> _online() async {
+    final list = await _current();
+    return list.contains(ConnectivityResult.wifi) ||
+        list.contains(ConnectivityResult.mobile) ||
+        list.contains(ConnectivityResult.ethernet);
+  }
+
   Future<void> syncOnce() async {
     final api = await ApiClient.create();
 
-    // Push local events
     final toPush = await repo.unsyncedEvents();
     if (toPush.isNotEmpty) {
-      await api.postEventsBatch(toPush);
-      await repo.markEventsSynced(toPush.map((e) => e.id).toList());
+      try {
+        await api.postEventsBatch(toPush);
+        await repo.markEventsSynced(toPush.map((e) => e.id).toList());
+      } catch (_) {}
     }
 
-    // Pull items since last sync
     final since = await repo.lastSync();
-    final items = await api.getItemsSince(since);
-    if (items.isNotEmpty) {
-      await repo.upsertItems(items);
-    }
-
-    await repo.setLastSync(DateTime.now().toUtc());
+    try {
+      final items = await api.getItemsSince(since);
+      if (items.isNotEmpty) {
+        await repo.upsertItems(items);
+      }
+      await repo.setLastSync(DateTime.now().toUtc());
+    } catch (_) {}
   }
 
-  StreamSubscription? _sub;
+  StreamSubscription<dynamic>? _conn;
+  StreamSubscription<bool>? _tick;
+
   void startAutoSync({Duration interval = const Duration(minutes: 5)}) {
-    _sub?.cancel();
-    _sub = Stream.periodic(interval).listen((_) async {
-      final c = await Connectivity().checkConnectivity();
-      if (c.contains(ConnectivityResult.wifi) ||
-          c.contains(ConnectivityResult.mobile)) {
-        try {
-          await syncOnce();
-        } catch (_) {
-          /* ignore transient */
-        }
-      }
+    _conn?.cancel();
+    _tick?.cancel();
+
+    // Immediate sync on connectivity regain
+    _conn = Connectivity().onConnectivityChanged.listen((
+      dynamic results,
+    ) async {
+      final List<ConnectivityResult> list = results is List<ConnectivityResult>
+          ? results
+          : <ConnectivityResult>[results as ConnectivityResult];
+      final ok =
+          list.contains(ConnectivityResult.wifi) ||
+          list.contains(ConnectivityResult.mobile) ||
+          list.contains(ConnectivityResult.ethernet);
+      if (!ok) return;
+      try {
+        await syncOnce();
+      } catch (_) {}
+    });
+
+    // Periodic sync while online
+    _tick = Stream.periodic(interval).asyncMap((_) => _online()).listen((
+      ok,
+    ) async {
+      if (!ok) return;
+      try {
+        await syncOnce();
+      } catch (_) {}
     });
   }
 
   void stop() {
-    _sub?.cancel();
-    _sub = null;
+    _server?.cancel();
+    _server = null;
+    _conn?.cancel();
+    _conn = null;
+    _tick?.cancel();
+    _tick = null;
+  }
+
+  StreamSubscription<bool>? _server;
+  void bindServerReachability(Stream<bool> s) {
+    _server?.cancel();
+    _server = s.listen((ok) async {
+      if (ok) {
+        try {
+          await syncOnce();
+        } catch (_) {}
+      }
+    });
   }
 }

@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/services/reachability.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "pages/home.dart";
 import "pages/fridge.dart";
@@ -47,8 +48,12 @@ class _ShellState extends ConsumerState<Shell> {
   @override
   void initState() {
     super.initState();
-    // background sync
-    Future.microtask(() => ref.read(syncProvider).startAutoSync());
+    Future.microtask(() {
+      final sync = ref.read(syncProvider);
+      final reach = ref.read(reachabilityProvider);
+      sync.bindServerReachability(reach.stream);
+      sync.startAutoSync();
+    });
   }
 
   @override

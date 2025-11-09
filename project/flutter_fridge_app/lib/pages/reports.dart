@@ -1,47 +1,81 @@
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/api/api_client.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter_fridge_app/data/repository.dart";
+import "package:flutter_fridge_app/main.dart";
+import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 
-class ReportsPage extends StatefulWidget {
+class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
   @override
-  State<ReportsPage> createState() => _ReportsPageState();
+  ConsumerState<ReportsPage> createState() => _ReportsPageState();
 }
 
-class _ReportsPageState extends State<ReportsPage> {
-  Map<String, dynamic>? weekly, monthly;
-  bool loading = true;
+class _ReportsPageState extends ConsumerState<ReportsPage> {
+  Map<String, num>? _weekly;
+  Map<String, num>? _monthly;
+  bool _loading = true;
+  String? _err;
+
   @override
   void initState() {
     super.initState();
     _load();
+    Future.microtask(
+      () => ref.read(syncProvider).syncOnce().then((_) => _load()),
+    );
   }
 
   Future<void> _load() async {
-    setState(() => loading = true);
-    final api = await ApiClient.create();
-    weekly = await api.getReport("weekly");
-    monthly = await api.getReport("monthly");
-    if (mounted) setState(() => loading = false);
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+    try {
+      final repo = ref.read(repoProvider);
+      _weekly = await repo.reportLocal("weekly");
+      _monthly = await repo.reportLocal("monthly");
+    } catch (e) {
+      _err = e.toString();
+    } finally {
+      if (mounted)
+        setState(() {
+          _loading = false;
+        });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Center(child: CircularProgressIndicator());
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [_card("Weekly", weekly!), _card("Monthly", monthly!)],
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_err != null) return Center(child: Text("Error: $_err"));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Reports"),
+        bottom: const ServerReachabilityBanner(),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(syncProvider).syncOnce();
+          await _load();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [_card("Weekly", _weekly), _card("Monthly", _monthly)],
+        ),
       ),
     );
   }
 
-  Widget _card(String title, Map<String, dynamic> data) => Card(
-    child: ListTile(
-      title: Text(title),
-      subtitle: Text(
-        "Cost: ${data["totalCost"]}  |  Usage: ${data["totalUsage"]}",
+  Widget _card(String title, Map<String, num>? data) {
+    final cost = (data?["totalCost"] ?? 0).toStringAsFixed(2);
+    final usage = (data?["totalUsage"] ?? 0).toString();
+    return Card(
+      child: ListTile(
+        title: Text(title),
+        subtitle: Text("Cost: $cost  |  Usage: $usage"),
       ),
-    ),
-  );
+    );
+  }
 }
