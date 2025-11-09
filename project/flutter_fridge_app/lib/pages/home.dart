@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "package:flutter_fridge_app/data/repository.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 
@@ -42,10 +41,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     } catch (e) {
       _err = e.toString();
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
         });
+      }
     }
   }
 

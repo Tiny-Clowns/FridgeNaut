@@ -181,4 +181,28 @@ class Repo {
       return {"totalCost": 0, "totalUsage": 0};
     }
   }
+
+  Future<void> applyEventLocally(InventoryEvent e) async {
+    try {
+      final db = await _db;
+      final nowIso = e.createdAt.toIso8601String();
+      await db.transaction((txn) async {
+        await txn.insert("events", {
+          ...e.toJson(),
+          "synced": e.synced ? 1 : 0,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+        // persist new quantity, clamp at 0
+        await txn.rawUpdate(
+          """
+        UPDATE items
+        SET quantity = MAX(0, quantity + ?),
+            updatedAt = ?
+        WHERE id = ?
+        """,
+          [e.deltaQuantity, nowIso, e.itemId],
+        );
+      });
+    } catch (_) {}
+  }
 }

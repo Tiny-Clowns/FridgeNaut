@@ -1,4 +1,3 @@
-import "dart:math";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
@@ -51,7 +50,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         onRefresh: _refresh,
         child: ListView.separated(
           itemCount: items.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (_, i) {
             final it = items[i];
             return ListTile(
@@ -167,19 +166,14 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       createdAt: DateTime.now().toUtc(),
       synced: false,
     );
-    await ref.read(repoProvider).addEvent(e);
 
-    // optimistic local update
-    final idx = items.indexWhere((x) => x.id == it.id);
-    if (idx >= 0) {
-      final upd = it.copyWith(
-        quantity: (it.quantity + delta).clamp(0, double.infinity),
-        updatedAt: DateTime.now().toUtc(),
-      );
-      items = [...items]..[idx] = upd;
-      if (mounted) setState(() {});
-    }
+    // write event + persist quantity in one transaction
+    await ref.read(repoProvider).applyEventLocally(e);
 
+    // refresh list from DB so UI reflects persisted value
+    await _load();
+
+    // try to sync in background
     try {
       await ref.read(syncProvider).syncOnce();
     } catch (_) {}

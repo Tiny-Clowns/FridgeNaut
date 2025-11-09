@@ -143,7 +143,7 @@ class _ItemFormState extends State<ItemForm> {
                       firstDate: DateTime(now.year - 1),
                       lastDate: DateTime(now.year + 5),
                     );
-                    if (picked != null)
+                    if (picked != null) {
                       setState(
                         () => _exp = DateTime.utc(
                           picked.year,
@@ -151,6 +151,7 @@ class _ItemFormState extends State<ItemForm> {
                           picked.day,
                         ),
                       );
+                    }
                   },
                 ),
               ),
