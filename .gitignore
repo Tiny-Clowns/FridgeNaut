@@ -53,6 +53,7 @@ secrets.json
 .packages
 .pub-cache/
 flutter_export_environment.sh
+devtools_options.yaml
 
 # Build outputs (Flutter, Android, Web)
 **/build/
