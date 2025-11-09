@@ -1,10 +1,16 @@
+# .github/workflows/project-in-review.yml
 name: "Project: In Review on PR or push to develop"
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, edited]
-    branches: [develop]
+    branches: ["**"]
   push:
     branches: [develop]
+  workflow_dispatch: {}
+
+env:
+  PROJECT_OWNER: ${{ github.repository_owner }}
+  PROJECT_NUMBER: "3"
 
 jobs:
   move_in_review:
@@ -17,33 +23,27 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PROJECTS_TOKEN != '' && secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const owner = context.repo.owner;
+            const owner = process.env.PROJECT_OWNER;
             const repo  = context.repo.repo;
-            const projectNumber = 3;
+            const number = parseInt(process.env.PROJECT_NUMBER, 10);
 
-            const proj = await github.graphql(`
-              query($owner:String!,$number:Int!){
-                user(login:$owner){
-                  projectV2(number:$number){
-                    id
-                    fields(first:50){
-                      nodes{
-                        ... on ProjectV2SingleSelectField {
-                          id name
-                          options { id name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }`, { owner, number: projectNumber });
+            async function getProject(owner, number){
+              const q = await github.graphql(`
+                query($owner:String!,$number:Int!){
+                  user(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                  organization(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                }`, { owner, number });
+              return q.user?.p ?? q.organization?.p ?? null;
+            }
 
-            const project = proj.user.projectV2;
+            const project = await getProject(owner, number);
+            if (!project) return core.setFailed("Project not found");
             const statusField = project.fields.nodes.find(f => f?.name === "Status");
-            const inReview = statusField?.options.find(o => /in review/i.test(o.name));
-            if (!statusField || !inReview) { core.setFailed("Status 'In Review' not found"); return; }
+            if (!statusField) return core.setFailed("Status field not found");
+            const inReview = statusField.options.find(o => /in review/i.test(o.name));
+            if (!inReview) return core.setFailed("'In Review' option missing");
 
             const issueIds = new Set();
 
@@ -51,10 +51,8 @@ jobs:
               const prNumber = context.payload.pull_request.number;
               const closingQ = await github.graphql(`
                 query($owner:String!,$repo:String!,$pr:Int!){
-                  repository(owner:$owner, name:$repo){
-                    pullRequest(number:$pr){
-                      closingIssuesReferences(first:50){ nodes{ id number } }
-                    }
+                  repository(owner:$owner,name:$repo){
+                    pullRequest(number:$pr){ closingIssuesReferences(first:50){ nodes{ id number } } }
                   }
                 }`, { owner, repo, pr: prNumber });
               for (const n of closingQ.repository.pullRequest.closingIssuesReferences.nodes) issueIds.add(n.id);
@@ -65,12 +63,9 @@ jobs:
                   const num = parseInt(m[1],10);
                   const q = await github.graphql(`
                     query($owner:String!,$repo:String!,$num:Int!){
-                      repository(owner:$owner, name:$repo){
-                        issue(number:$num){ id }
-                      }
-                    }`, { owner, repo, num }).catch(() => null);
-                  const id = q?.repository?.issue?.id;
-                  if (id) issueIds.add(id);
+                      repository(owner:$owner,name:$repo){ issue(number:$num){ id } }
+                    }`, { owner, repo, num }).catch(()=>null);
+                  const id = q?.repository?.issue?.id; if (id) issueIds.add(id);
                 }
               }
             }
@@ -78,25 +73,12 @@ jobs:
             for (const id of issueIds) {
               const add = await github.graphql(`
                 mutation($projectId:ID!,$contentId:ID!){
-                  addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) {
-                    item { id }
-                  }
-                }`, { projectId: project.id, contentId: id }).catch(() => null);
-              const itemId = add?.addProjectV2ItemById?.item?.id;
-              if (!itemId) continue;
+                  addProjectV2ItemById(input:{projectId:$projectId,contentId:$contentId}){ item{ id } }
+                }`, { projectId: project.id, contentId: id }).catch(()=>null);
+              const itemId = add?.addProjectV2ItemById?.item?.id; if (!itemId) continue;
 
               await github.graphql(`
-                mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!){
-                  updateProjectV2ItemFieldValue(input:{
-                    projectId:$projectId,
-                    itemId:$itemId,
-                    fieldId:$fieldId,
-                    value:{ singleSelectOptionId:$optionId }
-                  }) { clientMutationId }
-                }`, {
-                  projectId: project.id,
-                  itemId,
-                  fieldId: statusField.id,
-                  optionId: inReview.id
-                });
+                mutation($projectId:ID!,$itemId:ID!,$fieldId:ID!,$optionId:String!){
+                  updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId,fieldId:$fieldId,value:{singleSelectOptionId:$optionId}}){ clientMutationId }
+                }`, { projectId: project.id, itemId, fieldId: statusField.id, optionId: inReview.id });
             }

@@ -1,12 +1,19 @@
+# .github/workflows/project-to-test-or-back.yml
 name: "Project: To Test when all checks succeed, back to In Progress on failure (develop)"
 on:
   workflow_run:
-    workflows: ["CI", "CodeQL"] # list every workflow that reports checks
+    workflows: ["ci", "codeql"] # must match the exact 'name:' values
     types: [completed]
+  workflow_dispatch: {}
+
+env:
+  PROJECT_OWNER: ${{ github.repository_owner }}
+  PROJECT_NUMBER: "3"
 
 jobs:
   move_after_checks:
-    if: ${{ github.event.workflow_run.head_branch == 'develop' }}
+    # Only act for runs on develop
+    if: ${{ github.event.workflow_run.head_branch == 'develop' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,117 +24,65 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PROJECTS_TOKEN != '' && secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const owner = context.repo.owner;
+            const owner = process.env.PROJECT_OWNER;
             const repo  = context.repo.repo;
-            const projectNumber = 3; // <-- your Project V2 number
+            const number = parseInt(process.env.PROJECT_NUMBER, 10);
 
-            // ----- 1) Get all check runs for this commit (CI + CodeQL + others)
-            const sha = context.payload.workflow_run.head_sha;
-            const checks = await github.paginate(
-              github.rest.checks.listForRef,
-              { owner, repo, ref: sha, filter: "all", per_page: 100 }
-            );
+            async function getProject(owner, number){
+              const q = await github.graphql(`
+                query($owner:String!,$number:Int!){
+                  user(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                  organization(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                }`, { owner, number });
+              return q.user?.p ?? q.organization?.p ?? null;
+            }
 
+            const sha = (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
+            const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, filter: "all", per_page: 100 });
             const runs = checks.flatMap(p => p.check_runs ?? []);
-            if (!runs.length) {
-              core.info("No check runs found for commit; skipping");
-              return;
-            }
+            if (!runs.length) { core.info("No check runs for commit"); return; }
 
-            // Completed? Success?
             const incomplete = runs.filter(r => r.status !== "completed");
-            if (incomplete.length > 0) {
-              core.info(`Checks still running (${incomplete.length}); skip transition for now`);
-              return; // wait for another workflow_run event
-            }
-
-            const failures = runs.filter(r =>
-              ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion || "").toLowerCase())
-            );
-
+            if (incomplete.length) { core.info(`Checks still running (${incomplete.length}); skip`); return; }
+            const failures = runs.filter(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));
             const allSucceeded = failures.length === 0;
 
-            // ----- 2) Resolve Project + Status field options
-            const proj = await github.graphql(`
-              query($owner:String!, $number:Int!){
-                user(login:$owner){
-                  projectV2(number:$number){
-                    id
-                    fields(first:50){
-                      nodes{
-                        ... on ProjectV2SingleSelectField {
-                          id name
-                          options { id name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }`,
-              { owner, number: projectNumber }
-            );
-
-            const project = proj.user?.projectV2;
-            if (!project) { core.setFailed("Project not found"); return; }
-
+            const project = await getProject(owner, number);
+            if (!project) return core.setFailed("Project not found");
             const statusField = project.fields.nodes.find(f => f?.name === "Status");
-            if (!statusField) { core.setFailed("Status field not found"); return; }
-
+            if (!statusField) return core.setFailed("Status field not found");
             const toTest = statusField.options.find(o => /^to test$/i.test(o.name));
             const inProg = statusField.options.find(o => /in progress/i.test(o.name));
-            if (allSucceeded && !toTest) { core.setFailed("'To Test' option missing"); return; }
-            if (!allSucceeded && !inProg) { core.setFailed("'In Progress' option missing"); return; }
+            if (allSucceeded && !toTest) return core.setFailed("'To Test' option missing");
+            if (!allSucceeded && !inProg) return core.setFailed("'In Progress' option missing");
 
-            // ----- 3) Get PRs associated with this workflow run
-            const prs = context.payload.workflow_run.pull_requests || [];
-            if (!prs.length) { core.info("No PRs associated with this run"); return; }
+            const prs = (context.payload.workflow_run && context.payload.workflow_run.pull_requests) || [];
+            if (!prs.length) { core.info("No PRs on this run"); return; }
 
-            // ----- 4) For each PR, move closing issues accordingly
             for (const pr of prs) {
               const prNumber = pr.number;
-
               const closingQ = await github.graphql(`
                 query($owner:String!,$repo:String!,$pr:Int!){
-                  repository(owner:$owner, name:$repo){
-                    pullRequest(number:$pr){
-                      closingIssuesReferences(first:50){ nodes{ id number } }
-                    }
+                  repository(owner:$owner,name:$repo){
+                    pullRequest(number:$pr){ closingIssuesReferences(first:50){ nodes{ id number } } }
                   }
                 }`, { owner, repo, pr: prNumber });
 
               const issues = closingQ.repository.pullRequest.closingIssuesReferences.nodes;
-              if (!issues.length) continue;
-
               for (const iss of issues) {
-                // Ensure issue is in project
                 const add = await github.graphql(`
                   mutation($projectId:ID!,$contentId:ID!){
-                    addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) {
-                      item { id }
-                    }
-                  }`, { projectId: project.id, contentId: iss.id }).catch(() => null);
-                const itemId = add?.addProjectV2ItemById?.item?.id;
-                if (!itemId) continue;
+                    addProjectV2ItemById(input:{projectId:$projectId,contentId:$contentId}){ item{ id } }
+                  }`, { projectId: project.id, contentId: iss.id }).catch(()=>null);
+                const itemId = add?.addProjectV2ItemById?.item?.id; if (!itemId) continue;
 
                 const optionId = allSucceeded ? toTest.id : inProg.id;
-
                 await github.graphql(`
-                  mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!){
-                    updateProjectV2ItemFieldValue(input:{
-                      projectId:$projectId,
-                      itemId:$itemId,
-                      fieldId:$fieldId,
-                      value:{ singleSelectOptionId:$optionId }
-                    }) { clientMutationId }
-                  }`, {
-                    projectId: project.id,
-                    itemId,
-                    fieldId: statusField.id,
-                    optionId
-                  });
-
+                  mutation($projectId:ID!,$itemId:ID!,$fieldId:ID!,$optionId:String!){
+                    updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId,fieldId:$fieldId,value:{singleSelectOptionId:$optionId}}){ clientMutationId }
+                  }`, { projectId: project.id, itemId, fieldId: statusField.id, optionId });
                 core.info(`#${iss.number} → ${allSucceeded ? "To Test" : "In Progress"}`);
               }
             }

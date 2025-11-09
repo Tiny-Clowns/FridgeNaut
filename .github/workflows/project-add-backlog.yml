@@ -1,7 +1,13 @@
+# .github/workflows/project-add-backlog.yml
 name: "Project: add new issues to Backlog"
 on:
   issues:
     types: [opened]
+  workflow_dispatch: {}
+
+env:
+  PROJECT_OWNER: ${{ github.repository_owner }}
+  PROJECT_NUMBER: "3"
 
 jobs:
   add_and_backlog:
@@ -14,67 +20,44 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PROJECTS_TOKEN != '' && secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const owner = context.repo.owner;
+            const owner = process.env.PROJECT_OWNER;
             const repo  = context.repo.repo;
-            const projectNumber = 3;
+            const number = parseInt(process.env.PROJECT_NUMBER, 10);
 
-            const proj = await github.graphql(`
-              query($owner:String!, $number:Int!){
-                user(login:$owner){
-                  projectV2(number:$number){
-                    id
-                    fields(first:50){
-                      nodes{
-                        ... on ProjectV2SingleSelectField {
-                          id name
-                          options { id name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }`, { owner, number: projectNumber });
-
-            const project = proj.user.projectV2;
-            const statusField = project.fields.nodes.find(f => f?.name === "Status");
-            const backlog = statusField?.options.find(o => /backlog/i.test(o.name));
-            if (!statusField || !backlog) {
-              core.setFailed("Project Status 'Backlog' not found");
-              return;
+            async function getProject(owner, number){
+              const q = await github.graphql(`
+                query($owner:String!,$number:Int!){
+                  user(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                  organization(login:$owner){ p:projectV2(number:$number){ id fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name }}}}}}
+                }`, { owner, number });
+              return q.user?.p ?? q.organization?.p ?? null;
             }
 
-            const issueNum = context.payload.issue.number;
-            const issueQ = await github.graphql(`
-              query($owner:String!, $repo:String!, $num:Int!){
-                repository(owner:$owner, name:$repo){
-                  issue(number:$num){ id }
-                }
-              }`, { owner, repo, num: issueNum });
+            const project = await getProject(owner, number);
+            if (!project) return core.setFailed(`ProjectV2 #${number} not found for ${owner}`);
+            const statusField = project.fields.nodes.find(f => f?.name === "Status");
+            if (!statusField) return core.setFailed("Status field not found");
+            const backlog = statusField.options.find(o => /backlog/i.test(o.name));
+            if (!backlog) return core.setFailed("Backlog option not found");
 
-            const issueId = issueQ.repository.issue.id;
+            const issueNum = context.payload.issue.number;
+            const iq = await github.graphql(`
+              query($owner:String!,$repo:String!,$num:Int!){
+                repository(owner:$owner, name:$repo){ issue(number:$num){ id } }
+              }`, { owner, repo, num: issueNum });
+            const issueId = iq.repository.issue.id;
 
             const add = await github.graphql(`
               mutation($projectId:ID!,$contentId:ID!){
-                addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) {
-                  item { id }
-                }
-              }`, { projectId: project.id, contentId: issueId }).catch(() => null);
+                addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}){ item{ id } }
+              }`, { projectId: project.id, contentId: issueId }).catch(()=>null);
             const itemId = add?.addProjectV2ItemById?.item?.id;
-            if (!itemId) { core.setFailed("Could not add issue to project"); return; }
+            if (!itemId) return core.setFailed("Could not add issue to project");
 
             await github.graphql(`
-              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!){
-                updateProjectV2ItemFieldValue(input:{
-                  projectId:$projectId,
-                  itemId:$itemId,
-                  fieldId:$fieldId,
-                  value:{ singleSelectOptionId:$optionId }
-                }) { clientMutationId }
-              }`, {
-                projectId: project.id,
-                itemId,
-                fieldId: statusField.id,
-                optionId: backlog.id
-              });
+              mutation($projectId:ID!,$itemId:ID!,$fieldId:ID!,$optionId:String!){
+                updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId,fieldId:$fieldId,value:{singleSelectOptionId:$optionId}}){ clientMutationId }
+              }`, { projectId: project.id, itemId, fieldId: statusField.id, optionId: backlog.id });
+            core.info(`#${issueNum} → Backlog`)
