@@ -1,9 +1,9 @@
-name: "Project: In Progress on feature/fix/hotfix branch"
+name: "Project: In Progress on branch"
 on:
   create:
-    branches: ["feature/**", "fix/**", "hotfix/**"]
+    branches: ["**"]
   push:
-    branches: ["feature/**", "fix/**", "hotfix/**"]
+    branches: ["**"]
 
 jobs:
   move_in_progress:
