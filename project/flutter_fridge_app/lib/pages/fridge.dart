@@ -1,10 +1,11 @@
 import "dart:math";
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/models/inventory_event.dart";
+import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
+import "package:flutter_fridge_app/widgets/item_form.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
   const FridgePage({super.key});
@@ -25,7 +26,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
   Future<void> _load() async {
     try {
       final repo = ref.read(repoProvider);
-      items = await repo.allItems(); // returns [] on failure
+      items = await repo.allItems();
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -59,23 +60,25 @@ class _FridgePageState extends ConsumerState<FridgePage> {
                 "${it.quantity} ${it.unit}"
                 "${it.expirationDate != null ? " · exp ${it.expirationDate!.toLocal().toIso8601String().substring(0, 10)}" : ""}",
               ),
-              trailing: IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () async {
-                  final e = InventoryEvent(
-                    id: _genId(),
-                    itemId: it.id,
-                    deltaQuantity: 1,
-                    unitPriceAtEvent: null,
-                    type: "Adjust",
-                    occurredAt: DateTime.now().toUtc(),
-                    createdAt: DateTime.now().toUtc(),
-                    synced: false,
-                  );
-                  await ref.read(repoProvider).addEvent(e);
-                  await ref.read(syncProvider).syncOnce();
-                  await _load();
-                },
+              onTap: () async {
+                await _editItem(it);
+              },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: () async {
+                      await _adjust(it, -1);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () async {
+                      await _adjust(it, 1);
+                    },
+                  ),
+                ],
               ),
             );
           },
@@ -83,28 +86,103 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final id = _genId();
-          final now = DateTime.now().toUtc();
-          final newItem = Item(
-            id: id,
-            name: "Item ${Random().nextInt(999)}",
-            quantity: 1,
-            unit: "pcs",
-            expirationDate: null,
-            pricePerUnit: null,
-            toBuy: false,
-            notifyOnLow: true,
-            notifyOnExpire: true,
-            lowThreshold: 1,
-            createdAt: now,
-            updatedAt: now,
-          );
-          items = [...items, newItem];
-          if (mounted) setState(() {});
+          await _addItem();
         },
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Future<void> _addItem() async {
+    final Item? item = await showModalBottomSheet<Item>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const ItemForm(),
+    );
+    if (item == null) return;
+
+    // Persist item
+    await ref.read(repoProvider).upsertItem(item);
+
+    // Seed inventory with initial quantity as a "Purchase"
+    if (item.quantity != 0) {
+      final e = InventoryEvent(
+        id: _genId(),
+        itemId: item.id,
+        deltaQuantity: item.quantity,
+        unitPriceAtEvent: item.pricePerUnit,
+        type: "Purchase",
+        occurredAt: DateTime.now().toUtc(),
+        createdAt: DateTime.now().toUtc(),
+        synced: false,
+      );
+      await ref.read(repoProvider).addEvent(e);
+    }
+
+    try {
+      await ref.read(syncProvider).syncOnce();
+    } catch (_) {}
+    await _load();
+  }
+
+  Future<void> _editItem(Item old) async {
+    final Item? updated = await showModalBottomSheet<Item>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ItemForm(existing: old),
+    );
+    if (updated == null) return;
+
+    await ref.read(repoProvider).upsertItem(updated);
+
+    final delta = (updated.quantity - old.quantity);
+    if (delta != 0) {
+      final e = InventoryEvent(
+        id: _genId(),
+        itemId: updated.id,
+        deltaQuantity: delta,
+        unitPriceAtEvent: updated.pricePerUnit,
+        type: delta > 0 ? "Adjust" : "Use",
+        occurredAt: DateTime.now().toUtc(),
+        createdAt: DateTime.now().toUtc(),
+        synced: false,
+      );
+      await ref.read(repoProvider).addEvent(e);
+    }
+
+    try {
+      await ref.read(syncProvider).syncOnce();
+    } catch (_) {}
+    await _load();
+  }
+
+  Future<void> _adjust(Item it, double delta) async {
+    final e = InventoryEvent(
+      id: _genId(),
+      itemId: it.id,
+      deltaQuantity: delta,
+      unitPriceAtEvent: null,
+      type: delta > 0 ? "Adjust" : "Use",
+      occurredAt: DateTime.now().toUtc(),
+      createdAt: DateTime.now().toUtc(),
+      synced: false,
+    );
+    await ref.read(repoProvider).addEvent(e);
+
+    // optimistic local update
+    final idx = items.indexWhere((x) => x.id == it.id);
+    if (idx >= 0) {
+      final upd = it.copyWith(
+        quantity: (it.quantity + delta).clamp(0, double.infinity),
+        updatedAt: DateTime.now().toUtc(),
+      );
+      items = [...items]..[idx] = upd;
+      if (mounted) setState(() {});
+    }
+
+    try {
+      await ref.read(syncProvider).syncOnce();
+    } catch (_) {}
   }
 
   String _genId() => DateTime.now().microsecondsSinceEpoch.toString();

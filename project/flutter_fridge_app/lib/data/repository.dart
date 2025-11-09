@@ -6,6 +6,24 @@ import "package:flutter_fridge_app/models/models.dart";
 class Repo {
   Future<Database> get _db async => await AppDb.instance;
 
+  Future<void> upsertItem(Item item) async {
+    try {
+      final db = await _db;
+      await db.insert(
+        "items",
+        item.toDb(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> deleteItem(String id) async {
+    try {
+      final db = await _db;
+      await db.delete("items", where: "id = ?", whereArgs: [id]);
+    } catch (_) {}
+  }
+
   Future<void> upsertItems(List<Item> items) async {
     try {
       final db = await _db;
@@ -13,7 +31,7 @@ class Repo {
       for (final i in items) {
         batch.insert(
           "items",
-          i.toJson(),
+          i.toDb(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -58,7 +76,7 @@ class Repo {
     try {
       final db = await _db;
       final rows = await db.query("items", orderBy: "name");
-      return rows.map((r) => Item.fromJson(r)).toList();
+      return rows.map((r) => Item.fromDb(r)).toList();
     } catch (_) {
       return <Item>[];
     }
@@ -99,7 +117,7 @@ class Repo {
       final expLimit = now.add(Duration(days: days)).toIso8601String();
 
       final rows = await db.query("items");
-      final items = rows.map((r) => Item.fromJson(r)).toList();
+      final items = rows.map((r) => Item.fromDb(r)).toList(); // <- fromDb
 
       final lowThresh = threshold;
       final low = items

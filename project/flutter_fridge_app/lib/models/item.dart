@@ -57,6 +57,7 @@ class Item {
     );
   }
 
+  // ----- JSON (API) -----
   static Item fromJson(Map<String, dynamic> j) => Item(
     id: j["id"],
     name: j["name"],
@@ -90,4 +91,39 @@ class Item {
     "createdAt": createdAt.toIso8601String(),
     "updatedAt": updatedAt.toIso8601String(),
   };
+
+  // ----- SQLite (DB) -----
+  Map<String, Object?> toDb() => {
+    "id": id,
+    "name": name,
+    "quantity": quantity,
+    "unit": unit,
+    "expirationDate": expirationDate?.toIso8601String(),
+    "pricePerUnit": pricePerUnit,
+    "toBuy": toBuy ? 1 : 0, // ints for booleans
+    "notifyOnLow": notifyOnLow ? 1 : 0,
+    "notifyOnExpire": notifyOnExpire ? 1 : 0,
+    "lowThreshold": lowThreshold,
+    "createdAt": createdAt.toIso8601String(),
+    "updatedAt": updatedAt.toIso8601String(),
+  };
+
+  factory Item.fromDb(Map<String, Object?> r) => Item(
+    id: r["id"] as String,
+    name: r["name"] as String,
+    quantity: (r["quantity"] as num).toDouble(),
+    unit: r["unit"] as String,
+    expirationDate:
+        (r["expirationDate"] as String?) == null ||
+            (r["expirationDate"] as String).isEmpty
+        ? null
+        : DateTime.parse(r["expirationDate"] as String),
+    pricePerUnit: (r["pricePerUnit"] as num?)?.toDouble(),
+    toBuy: ((r["toBuy"] as num?) ?? 0) != 0,
+    notifyOnLow: ((r["notifyOnLow"] as num?) ?? 0) != 0,
+    notifyOnExpire: ((r["notifyOnExpire"] as num?) ?? 0) != 0,
+    lowThreshold: (r["lowThreshold"] as num).toDouble(),
+    createdAt: DateTime.parse(r["createdAt"] as String),
+    updatedAt: DateTime.parse(r["updatedAt"] as String),
+  );
 }
