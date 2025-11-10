@@ -2,9 +2,13 @@
 name: "Project: To Test when all checks succeed, back to In Progress on failure (develop)"
 on:
   workflow_run:
-    workflows: ["ci", "codeql"] # exact workflow names
+    workflows: ["ci", "codeql"]
     types: [completed]
   workflow_dispatch: {}
+
+concurrency:
+  group: to-test-${{ (github.event.workflow_run && github.event.workflow_run.head_sha) || github.sha }}
+  cancel-in-progress: true
 
 env:
   PROJECT_URL: https://github.com/orgs/Tiny-Clowns/projects/6/views/1
@@ -61,13 +65,15 @@ jobs:
             const sha = (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
             const pages = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, filter: "all", per_page: 100 });
             const runs = pages.flatMap(p => p.check_runs ?? []);
-            if (!runs.length) { core.setFailed("No check runs for commit"); return; }
-            if (runs.some(r => r.status !== "completed")) { core.setFailed("Checks still running"); return; }
+            if (!runs.length) { core.info("No check runs for commit"); return core.setOutput("ready","false"); }
+            if (runs.some(r => r.status !== "completed")) { core.info("Checks still running"); return core.setOutput("ready","false"); }
             const failed = runs.some(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));
+            core.setOutput("ready","true");
             core.setOutput("allSucceeded", failed ? "false" : "true");
             core.setOutput("sha", sha);
 
       - name: Gather PRs and issues for this commit
+        if: ${{ steps.checks.outputs.ready == 'true' }}
         id: gather
         uses: actions/github-script@v7
         with:
@@ -78,16 +84,16 @@ jobs:
             const prSet = new Set();
             const issueIds = new Set();
 
-            // A) PRs associated with the commit
-            const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, { owner, repo, commit_sha: sha, per_page: 100 });
+            const prs = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              { owner, repo, commit_sha: sha, per_page: 100 }
+            );
             for (const pr of prs) prSet.add(pr.number);
 
-            // B) Parse merge commit message for PR number
             const commit = await github.rest.repos.getCommit({ owner, repo, ref: sha });
             const msg = commit.data.commit.message || "";
             for (const m of msg.matchAll(/(?:Merge pull request #|#)(\d+)/g)) prSet.add(parseInt(m[1],10));
 
-            // Closing issues from PR
             async function addClosingIssues(prNumber){
               const q = await github.graphql(`query($o:String!,$r:String!,$p:Int!){
                 repository(owner:$o,name:$r){
@@ -97,7 +103,6 @@ jobs:
               for (const n of (q?.repository?.pullRequest?.closingIssuesReferences?.nodes || [])) issueIds.add(n.id);
             }
 
-            // Fallback: issues referenced in the message
             async function addIssuesFromMessage(){
               const nums = new Set();
               for (const m of msg.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/ig)) nums.add(parseInt(m[1],10));
@@ -116,7 +121,7 @@ jobs:
             core.setOutput("issueIds", JSON.stringify([...issueIds]));
 
       - name: Move issues to To Test / In Progress
-        if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && steps.gather.outputs.issueIds != '[]' }}
+        if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && steps.gather.outputs.issueIds != '[]' && steps.checks.outputs.ready == 'true' }}
         env:
           ISSUE_IDS: ${{ steps.gather.outputs.issueIds }}
         uses: actions/github-script@v7
