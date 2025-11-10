@@ -13,6 +13,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Map<String, List<dynamic>> _alerts = const {
     "low": [],
     "expSoon": [],
+    "expired": [],
     "outOfStock": [],
     "toBuy": [],
   };
@@ -37,7 +38,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     try {
       final repo = ref.read(repoProvider);
       final alerts = await repo.alertsLocal(days: 3);
-      _alerts = alerts.map((k, v) => MapEntry(k, v));
+
+      // Merge with defaults to ensure all buckets exist.
+      _alerts = {
+        "low": alerts["low"] ?? <dynamic>[],
+        "expSoon": alerts["expSoon"] ?? <dynamic>[],
+        "expired": alerts["expired"] ?? <dynamic>[],
+        "outOfStock": alerts["outOfStock"] ?? <dynamic>[],
+        "toBuy": alerts["toBuy"] ?? <dynamic>[],
+      };
     } catch (e) {
       _err = e.toString();
     } finally {
@@ -55,7 +64,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (_err != null) return Center(child: Text("Error: $_err"));
 
     final low = _alerts["low"]!.length;
-    final exp = _alerts["expSoon"]!.length;
+    final expSoon = _alerts["expSoon"]!.length;
+    final expired = (_alerts["expired"] ?? const <dynamic>[]).length;
     final oos = _alerts["outOfStock"]!.length;
     final buy = _alerts["toBuy"]!.length;
 
@@ -74,7 +84,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           padding: const EdgeInsets.all(16),
           children: [
             _stat("Low stock", low),
-            _stat("Expiring soon", exp),
+            _stat("Expiring soon", expSoon),
+            _stat("Expired", expired),
             _stat("Out of stock", oos),
             _stat("Planned to buy", buy),
           ],
