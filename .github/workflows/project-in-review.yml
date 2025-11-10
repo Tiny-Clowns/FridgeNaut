@@ -1,11 +1,9 @@
 # .github/workflows/project-in-review.yml
-name: "Project: In Review on PR or push to develop"
+name: "Project: In Review on PR"
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, edited]
     branches: ["**"]
-  push:
-    branches: [develop]
   workflow_dispatch: {}
 
 env:

@@ -2,7 +2,7 @@
 name: "Project: To Test when all checks succeed, back to In Progress on failure (develop)"
 on:
   workflow_run:
-    workflows: ["ci", "codeql"] # must match exact workflow names
+    workflows: ["ci", "codeql"] # exact workflow 'name:' values
     types: [completed]
   workflow_dispatch: {}
 
@@ -11,11 +11,11 @@ env:
 
 jobs:
   move_after_checks:
-    if: ${{ github.event.workflow_run.head_branch == 'develop' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ (github.event.workflow_run.head_branch == 'develop' || github.event_name == 'workflow_dispatch') && github.repository_owner == 'Tiny-Clowns' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
+      issues: read
       pull-requests: read
       checks: read
       repository-projects: write
@@ -38,10 +38,12 @@ jobs:
             if (!m) return core.setFailed("Bad PROJECT_URL");
             const owner = m[1], number = parseInt(m[2],10);
             const r = await github.graphql(`query($o:String!,$n:Int!){
-              organization(login:$o){ projectV2(number:$n){
-                id
-                fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
-              }}}`, { o: owner, n: number });
+              organization(login:$o){
+                projectV2(number:$n){
+                  id
+                  fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
+                }
+              }}`, { o: owner, n: number });
             const p = r.organization?.projectV2; if (!p) return core.setFailed("Project not found");
             const status = (p.fields.nodes||[]).find(f=>f?.name==="Status");
             function opt(rx){ return status?.options.find(o=>rx.test(o.name))?.id || ""; }
@@ -51,7 +53,7 @@ jobs:
             core.setOutput("inProgId", opt(/in progress/i));
 
       - name: Move closing issues based on checks
-        if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && (steps.proj.outputs.toTestId != '' || steps.proj.outputs.inProgId != '') }}
+        if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app.outputs.token }}
@@ -63,30 +65,35 @@ jobs:
             const toTestId  = "${{ steps.proj.outputs.toTestId }}";
             const inProgId  = "${{ steps.proj.outputs.inProgId }}";
 
+            // 1) Collect check runs for the commit
             const sha = (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
             const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, filter: "all", per_page: 100 });
             const runs = checks.flatMap(p => p.check_runs ?? []);
             if (!runs.length) { core.info("No check runs for commit"); return; }
-            const incomplete = runs.filter(r => r.status !== "completed");
-            if (incomplete.length) { core.info(`Checks still running (${incomplete.length}); skip`); return; }
-            const failures = runs.filter(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));
-            const allSucceeded = failures.length === 0;
-
-            const prs = (context.payload.workflow_run && context.payload.workflow_run.pull_requests) || [];
-            if (!prs.length) { core.info("No PRs on this run"); return; }
-
-            const targetId = allSucceeded ? toTestId : inProgId;
+            if (runs.some(r => r.status !== "completed")) { core.info("Checks still running; skip"); return; }
+            const failed = runs.some(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));
+            const targetId = failed ? inProgId : toTestId;
             if (!targetId) { core.setFailed("Missing target Status option id"); return; }
 
+            // 2) Find PRs associated with this commit (reliable on merge to develop)
+            const prs = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              { owner, repo, commit_sha: sha, per_page: 100 }
+            );
+            if (!prs.length) { core.info("No PRs found for commit"); return; }
+
+            // 3) For each PR, move closing issues
             for (const pr of prs) {
               const prNumber = pr.number;
               const q = await github.graphql(`query($o:String!,$r:String!,$p:Int!){
                 repository(owner:$o,name:$r){
-                  pullRequest(number:$p){ closingIssuesReferences(first:50){ nodes{ id number } } }
+                  pullRequest(number:$p){
+                    closingIssuesReferences(first:50){ nodes{ id number } }
+                  }
                 }
               }`, { o: owner, r: repo, p: prNumber });
-
               const issues = q.repository.pullRequest.closingIssuesReferences.nodes;
+
               for (const iss of issues) {
                 const add = await github.graphql(`mutation($p:ID!,$c:ID!){
                   addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item{ id } }
@@ -94,8 +101,11 @@ jobs:
                 const itemId = add?.addProjectV2ItemById?.item?.id; if (!itemId) continue;
 
                 await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
-                  updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ clientMutationId }
+                  updateProjectV2ItemFieldValue(input:{
+                    projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}
+                  }){ clientMutationId }
                 }`, { p: projectId, i: itemId, f: fieldId, o: targetId });
-                core.info(`#${iss.number} → ${allSucceeded ? "To Test" : "In Progress"}`);
+
+                core.info(`#${iss.number} → ${failed ? "In Progress" : "To Test"}`);
               }
             }
