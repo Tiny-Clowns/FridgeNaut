@@ -2,7 +2,7 @@
 name: "Project: To Test when all checks succeed, back to In Progress on failure (develop)"
 on:
   workflow_run:
-    workflows: ["ci", "codeql"] # exact names
+    workflows: ["ci", "codeql"] # must match exact workflow names
     types: [completed]
   workflow_dispatch: {}
 
@@ -20,22 +20,28 @@ jobs:
       checks: read
       repository-projects: write
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: Tiny-Clowns
+
       - name: Resolve Project v2
         id: proj
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.app.outputs.token }}
           script: |
             const m = (process.env.PROJECT_URL||"").match(/\/orgs\/([^/]+)\/projects\/(\d+)/i);
             if (!m) return core.setFailed("Bad PROJECT_URL");
             const owner = m[1], number = parseInt(m[2],10);
             const r = await github.graphql(`query($o:String!,$n:Int!){
-              organization(login:$o){
-                projectV2(number:$n){
-                  id
-                  fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
-                }
-              }}`, { o: owner, n: number });
+              organization(login:$o){ projectV2(number:$n){
+                id
+                fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
+              }}}`, { o: owner, n: number });
             const p = r.organization?.projectV2; if (!p) return core.setFailed("Project not found");
             const status = (p.fields.nodes||[]).find(f=>f?.name==="Status");
             function opt(rx){ return status?.options.find(o=>rx.test(o.name))?.id || ""; }
@@ -48,7 +54,7 @@ jobs:
         if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && (steps.proj.outputs.toTestId != '' || steps.proj.outputs.inProgId != '') }}
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.app.outputs.token }}
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
@@ -61,7 +67,6 @@ jobs:
             const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, filter: "all", per_page: 100 });
             const runs = checks.flatMap(p => p.check_runs ?? []);
             if (!runs.length) { core.info("No check runs for commit"); return; }
-
             const incomplete = runs.filter(r => r.status !== "completed");
             if (incomplete.length) { core.info(`Checks still running (${incomplete.length}); skip`); return; }
             const failures = runs.filter(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));

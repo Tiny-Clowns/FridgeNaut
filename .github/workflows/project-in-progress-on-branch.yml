@@ -20,22 +20,28 @@ jobs:
       checks: read
       repository-projects: write
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: Tiny-Clowns
+
       - name: Resolve Project v2
         id: proj
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.app.outputs.token }}
           script: |
             const m = (process.env.PROJECT_URL||"").match(/\/orgs\/([^/]+)\/projects\/(\d+)/i);
             if (!m) return core.setFailed("Bad PROJECT_URL");
             const owner = m[1], number = parseInt(m[2],10);
             const r = await github.graphql(`query($o:String!,$n:Int!){
-              organization(login:$o){
-                projectV2(number:$n){
-                  id
-                  fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
-                }
-              }}`, { o: owner, n: number });
+              organization(login:$o){ projectV2(number:$n){
+                id
+                fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
+              }}}`, { o: owner, n: number });
             const p = r.organization?.projectV2; if (!p) return core.setFailed("Project not found");
             const status = (p.fields.nodes||[]).find(f=>f?.name==="Status");
             function opt(rx){ return status?.options.find(o=>rx.test(o.name))?.id || ""; }
@@ -47,7 +53,7 @@ jobs:
         if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && steps.proj.outputs.inProgId != '' }}
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.app.outputs.token }}
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
