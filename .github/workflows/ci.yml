@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         if: steps.detect.outputs.dotnet == 'true'
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "9.0.x"
 
       - name: dotnet format (verify)
         if: steps.detect.outputs.dotnet == 'true'
@@ -145,6 +145,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
       - name: Upload SARIF (only if present)
         if: hashFiles('.reports/gitleaks.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
