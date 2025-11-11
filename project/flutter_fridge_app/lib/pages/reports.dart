@@ -70,12 +70,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   Widget _card(String title, Map<String, num>? data) {
     final cost = (data?["totalCost"] ?? 0).toStringAsFixed(2);
-    final usage = (data?["totalUsage"] ?? 0).toString();
     return Card(
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text("Cost: $cost  |  Usage: $usage"),
-      ),
+      child: ListTile(title: Text(title), subtitle: Text("Cost: $cost")),
     );
   }
 }
