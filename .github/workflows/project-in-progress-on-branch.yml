@@ -7,10 +7,6 @@ on:
     branches: ["**"]
   workflow_dispatch: {}
 
-concurrency:
-  group: to-test-${{ (github.event.workflow_run && github.event.workflow_run.head_sha) || github.sha }}
-  cancel-in-progress: true
-
 env:
   PROJECT_URL: https://github.com/orgs/Tiny-Clowns/projects/6/views/1
 

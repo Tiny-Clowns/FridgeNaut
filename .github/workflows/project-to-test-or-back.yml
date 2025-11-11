@@ -4,7 +4,11 @@ on:
   workflow_run:
     workflows: ["ci", "codeql"]
     types: [completed]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to process (optional)"
+        required: false
 
 concurrency:
   group: to-test-${{ (github.event.workflow_run && github.event.workflow_run.head_sha) || github.sha }}
@@ -18,9 +22,10 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.head_branch == 'develop' }}
     runs-on: ubuntu-latest
     permissions:
+      actions: read
+      checks: read
       contents: read
       pull-requests: read
-      checks: read
       repository-projects: write
     steps:
       - name: App token
@@ -55,21 +60,31 @@ jobs:
             core.setOutput("toTestId", opt(/^to test$/i));
             core.setOutput("inProgId", opt(/in progress/i));
 
-      - name: Decide target status from checks
+      - name: Ready only when both ci and codeql are completed
         id: checks
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app.outputs.token }}
           script: |
             const owner = context.repo.owner, repo = context.repo.repo;
-            const sha = (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
-            const pages = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, filter: "all", per_page: 100 });
-            const runs = pages.flatMap(p => p.check_runs ?? []);
-            if (!runs.length) { core.info("No check runs for commit"); return core.setOutput("ready","false"); }
-            if (runs.some(r => r.status !== "completed")) { core.info("Checks still running"); return core.setOutput("ready","false"); }
-            const failed = runs.some(r => ["failure","timed_out","cancelled","action_required","stale"].includes((r.conclusion||"").toLowerCase()));
+            const inputSha = (core.getInput("sha")||"").trim();
+            const sha = inputSha || (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
+
+            const want = new Set(["ci","codeql"]);
+            const { data } = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, head_sha: sha, per_page: 100 });
+            const byName = new Map();
+            for (const r of (data.workflow_runs||[])) {
+              const name = (r.name||"").toLowerCase();
+              if (want.has(name) && !byName.has(name)) byName.set(name, { status: (r.status||"").toLowerCase(), conclusion: (r.conclusion||"").toLowerCase() });
+            }
+
+            // Wait until both exist and are completed
+            if (![...want].every(n => byName.has(n))) { core.info(`Missing runs for ${sha}`); core.setOutput("ready","false"); core.setOutput("sha", sha); return; }
+            if ([...byName.values()].some(r => r.status !== "completed")) { core.info("Runs not completed"); core.setOutput("ready","false"); core.setOutput("sha", sha); return; }
+
+            const allSucceeded = [...byName.values()].every(r => r.conclusion === "success");
             core.setOutput("ready","true");
-            core.setOutput("allSucceeded", failed ? "false" : "true");
+            core.setOutput("allSucceeded", allSucceeded ? "true" : "false");
             core.setOutput("sha", sha);
 
       - name: Gather PRs and issues for this commit
@@ -84,10 +99,7 @@ jobs:
             const prSet = new Set();
             const issueIds = new Set();
 
-            const prs = await github.paginate(
-              github.rest.repos.listPullRequestsAssociatedWithCommit,
-              { owner, repo, commit_sha: sha, per_page: 100 }
-            );
+            const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, { owner, repo, commit_sha: sha, per_page: 100 });
             for (const pr of prs) prSet.add(pr.number);
 
             const commit = await github.rest.repos.getCommit({ owner, repo, ref: sha });
