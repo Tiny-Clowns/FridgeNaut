@@ -1,5 +1,5 @@
 # .github/workflows/project-to-test-or-back.yml
-name: "Project: To Test when all checks succeed, back to In Progress on failure (develop)"
+name: "Project: To Test when all checks succeed, back to To Fix on failure (develop)"
 on:
   workflow_run:
     workflows: ["ci", "codeql"]
@@ -27,6 +27,7 @@ jobs:
       contents: read
       pull-requests: read
       repository-projects: write
+
     steps:
       - name: App token
         id: app
@@ -49,16 +50,29 @@ jobs:
               organization(login:$o){
                 projectV2(number:$n){
                   id
-                  fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
+                  fields(first:50){
+                    nodes{
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options{ id name }
+                      }
+                    }
+                  }
                 }
-              }}`, { o: owner, n: number });
-            const p = r.organization?.projectV2; if (!p) return core.setFailed("Project not found");
+              }}`,
+              { o: owner, n: number }
+            );
+            const p = r.organization?.projectV2;
+            if (!p) return core.setFailed("Project not found");
+
             const status = (p.fields.nodes||[]).find(f=>f?.name==="Status");
             const opt = rx => status?.options.find(o=>rx.test(o.name))?.id || "";
+
             core.setOutput("projectId", p.id);
             core.setOutput("statusFieldId", status?.id||"");
             core.setOutput("toTestId", opt(/^to test$/i));
-            core.setOutput("inProgId", opt(/in progress/i));
+            core.setOutput("toFixId",  opt(/to fix/i));
 
       - name: Ready only when both ci and codeql are completed
         id: checks
@@ -67,20 +81,47 @@ jobs:
           github-token: ${{ steps.app.outputs.token }}
           script: |
             const owner = context.repo.owner, repo = context.repo.repo;
+
+            // If you want the workflow_dispatch SHA to work, pass it into this step as an input
             const inputSha = (core.getInput("sha")||"").trim();
-            const sha = inputSha || (context.payload.workflow_run && context.payload.workflow_run.head_sha) || process.env.GITHUB_SHA;
+            const sha = inputSha
+              || (context.payload.workflow_run && context.payload.workflow_run.head_sha)
+              || process.env.GITHUB_SHA;
 
             const want = new Set(["ci","codeql"]);
-            const { data } = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, head_sha: sha, per_page: 100 });
+            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              per_page: 100
+            });
+
             const byName = new Map();
             for (const r of (data.workflow_runs||[])) {
               const name = (r.name||"").toLowerCase();
-              if (want.has(name) && !byName.has(name)) byName.set(name, { status: (r.status||"").toLowerCase(), conclusion: (r.conclusion||"").toLowerCase() });
+              if (want.has(name) && !byName.has(name)) {
+                byName.set(name, {
+                  status: (r.status||"").toLowerCase(),
+                  conclusion: (r.conclusion||"").toLowerCase()
+                });
+              }
             }
 
-            // Wait until both exist and are completed
-            if (![...want].every(n => byName.has(n))) { core.info(`Missing runs for ${sha}`); core.setOutput("ready","false"); core.setOutput("sha", sha); return; }
-            if ([...byName.values()].some(r => r.status !== "completed")) { core.info("Runs not completed"); core.setOutput("ready","false"); core.setOutput("sha", sha); return; }
+            // Require both ci and codeql runs to exist
+            if (![...want].every(n => byName.has(n))) {
+              core.info(`Missing runs for ${sha}`);
+              core.setOutput("ready","false");
+              core.setOutput("sha", sha);
+              return;
+            }
+
+            // Require both to be completed
+            if ([...byName.values()].some(r => r.status !== "completed")) {
+              core.info("Runs not completed");
+              core.setOutput("ready","false");
+              core.setOutput("sha", sha);
+              return;
+            }
 
             const allSucceeded = [...byName.values()].every(r => r.conclusion === "success");
             core.setOutput("ready","true");
@@ -99,31 +140,52 @@ jobs:
             const prSet = new Set();
             const issueIds = new Set();
 
-            const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, { owner, repo, commit_sha: sha, per_page: 100 });
+            const prs = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              { owner, repo, commit_sha: sha, per_page: 100 }
+            );
             for (const pr of prs) prSet.add(pr.number);
 
             const commit = await github.rest.repos.getCommit({ owner, repo, ref: sha });
             const msg = commit.data.commit.message || "";
-            for (const m of msg.matchAll(/(?:Merge pull request #|#)(\d+)/g)) prSet.add(parseInt(m[1],10));
+            for (const m of msg.matchAll(/(?:Merge pull request #|#)(\d+)/g)) {
+              prSet.add(parseInt(m[1],10));
+            }
 
             async function addClosingIssues(prNumber){
               const q = await github.graphql(`query($o:String!,$r:String!,$p:Int!){
                 repository(owner:$o,name:$r){
-                  pullRequest(number:$p){ closingIssuesReferences(first:100){ nodes{ id number } } }
+                  pullRequest(number:$p){
+                    closingIssuesReferences(first:100){
+                      nodes{ id number }
+                    }
+                  }
                 }
-              }`, { o: owner, r: repo, p: prNumber }).catch(()=>null);
-              for (const n of (q?.repository?.pullRequest?.closingIssuesReferences?.nodes || [])) issueIds.add(n.id);
+              }`,
+              { o: owner, r: repo, p: prNumber }).catch(()=>null);
+
+              for (const n of (q?.repository?.pullRequest?.closingIssuesReferences?.nodes || [])) {
+                issueIds.add(n.id);
+              }
             }
 
             async function addIssuesFromMessage(){
               const nums = new Set();
-              for (const m of msg.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/ig)) nums.add(parseInt(m[1],10));
-              for (const m of msg.matchAll(/#(\d{1,7})/g)) nums.add(parseInt(m[1],10));
+              for (const m of msg.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/ig)) {
+                nums.add(parseInt(m[1],10));
+              }
+              for (const m of msg.matchAll(/#(\d{1,7})/g)) {
+                nums.add(parseInt(m[1],10));
+              }
               for (const n of nums) {
                 const r = await github.graphql(`query($o:String!,$r:String!,$n:Int!){
-                  repository(owner:$o,name:$r){ issue(number:$n){ id } }
-                }`, { o: owner, r: repo, n }).catch(()=>null);
-                const id = r?.repository?.issue?.id; if (id) issueIds.add(id);
+                  repository(owner:$o,name:$r){
+                    issue(number:$n){ id }
+                  }
+                }`,
+                { o: owner, r: repo, n }).catch(()=>null);
+                const id = r?.repository?.issue?.id;
+                if (id) issueIds.add(id);
               }
             }
 
@@ -132,7 +194,7 @@ jobs:
 
             core.setOutput("issueIds", JSON.stringify([...issueIds]));
 
-      - name: Move issues to To Test / In Progress
+      - name: Move issues to To Test / To Fix
         if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && steps.gather.outputs.issueIds != '[]' && steps.checks.outputs.ready == 'true' }}
         env:
           ISSUE_IDS: ${{ steps.gather.outputs.issueIds }}
@@ -143,19 +205,37 @@ jobs:
             const projectId = "${{ steps.proj.outputs.projectId }}";
             const fieldId   = "${{ steps.proj.outputs.statusFieldId }}";
             const toTestId  = "${{ steps.proj.outputs.toTestId }}";
-            const inProgId  = "${{ steps.proj.outputs.inProgId }}";
+            const toFixId   = "${{ steps.proj.outputs.toFixId }}";
             const allSucceeded = "${{ steps.checks.outputs.allSucceeded }}" === "true";
-            const targetId = allSucceeded ? toTestId : inProgId;
-            if (!targetId) return core.setFailed("Missing target Status option id");
+
+            const targetId = allSucceeded ? toTestId : toFixId;
+            if (!targetId) {
+              return core.setFailed("Missing target Status option id (To Test / To Fix)");
+            }
 
             const issueIds = JSON.parse(process.env.ISSUE_IDS || "[]");
             for (const contentId of issueIds) {
               const add = await github.graphql(`mutation($p:ID!,$c:ID!){
-                addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item{ id } }
-              }`, { p: projectId, c: contentId }).catch(()=>null);
-              const itemId = add?.addProjectV2ItemById?.item?.id; if (!itemId) continue;
+                addProjectV2ItemById(input:{projectId:$p,contentId:$c}){
+                  item{ id }
+                }
+              }`,
+              { p: projectId, c: contentId }).catch(()=>null);
+
+              const itemId = add?.addProjectV2ItemById?.item?.id;
+              if (!itemId) continue;
 
               await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
-                updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ clientMutationId }
-              }`, { p: projectId, i: itemId, f: fieldId, o: targetId });
+                updateProjectV2ItemFieldValue(
+                  input:{
+                    projectId:$p,
+                    itemId:$i,
+                    fieldId:$f,
+                    value:{singleSelectOptionId:$o}
+                  }
+                ){
+                  clientMutationId
+                }
+              }`,
+              { p: projectId, i: itemId, f: fieldId, o: targetId });
             }
