@@ -28,7 +28,7 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: csharp
-          build-mode: manual
+          build-mode: none
 
       - name: Build solution
         working-directory: project
