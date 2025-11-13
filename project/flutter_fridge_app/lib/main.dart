@@ -45,20 +45,22 @@ class _ShellState extends ConsumerState<Shell> {
   int idx = 0;
   final pages = const [HomePage(), FridgePage(), ReportsPage(), SettingsPage()];
 
+  late final SyncManager _sync;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      final sync = ref.read(syncProvider);
-      final reach = ref.read(reachabilityProvider);
-      sync.bindServerReachability(reach.stream);
-      sync.startAutoSync();
-    });
+
+    _sync = ref.read(syncProvider);
+    final reach = ref.read(reachabilityProvider);
+
+    _sync.bindServerReachability(reach.stream);
+    _sync.startAutoSync();
   }
 
   @override
   void dispose() {
-    ref.read(syncProvider).stop();
+    _sync.stop();
     super.dispose();
   }
 
