@@ -30,26 +30,29 @@ jobs:
           channel: stable
 
       - name: Install dependencies
+        working-directory: project/flutter_fridge_app
         run: flutter pub get
 
       - name: Run tests
+        working-directory: project/flutter_fridge_app
         run: flutter test
 
       - name: Build debug APK (test)
+        working-directory: project/flutter_fridge_app
         run: flutter build apk --debug
 
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-debug.apk dist/fridgenaut-test-debug.apk
+          cp project/flutter_fridge_app/build/app/outputs/flutter-apk/app-debug.apk dist/fridgenaut-test-debug.apk
 
       - name: Publish test APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-test # FIXED tag, reused every time
+          tag_name: android-test
           name: "Android Test (debug)"
           files: dist/fridgenaut-test-debug.apk
-          prerelease: true # mark as pre-release
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -75,25 +78,28 @@ jobs:
           channel: stable
 
       - name: Install dependencies
+        working-directory: project/flutter_fridge_app
         run: flutter pub get
 
       - name: Run tests
+        working-directory: project/flutter_fridge_app
         run: flutter test
 
       - name: Build release APK (main)
+        working-directory: project/flutter_fridge_app
         run: flutter build apk --release
 
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/fridgenaut-main-release.apk
+          cp project/flutter_fridge_app/build/app/outputs/flutter-apk/app-release.apk dist/fridgenaut-main-release.apk
 
       - name: Publish main APK release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-main # another FIXED tag
+          tag_name: android-main
           name: "Android Main (release)"
           files: dist/fridgenaut-main-release.apk
-          prerelease: false # real release
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
