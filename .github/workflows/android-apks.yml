@@ -1,0 +1,99 @@
+name: Build Android APKs
+
+on:
+  push:
+    branches:
+      - test
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  build-test-apk:
+    if: github.ref == 'refs/heads/test'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create/update releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build debug APK (test)
+        run: flutter build apk --debug
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-debug.apk dist/fridgenaut-test-debug.apk
+
+      - name: Publish test APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-test # FIXED tag, reused every time
+          name: "Android Test (debug)"
+          files: dist/fridgenaut-test-debug.apk
+          prerelease: true # mark as pre-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-main-apk:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APK (main)
+        run: flutter build apk --release
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/fridgenaut-main-release.apk
+
+      - name: Publish main APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-main # another FIXED tag
+          name: "Android Main (release)"
+          files: dist/fridgenaut-main-release.apk
+          prerelease: false # real release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
