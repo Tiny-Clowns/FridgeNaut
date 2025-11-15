@@ -107,42 +107,78 @@ class Repo {
     } catch (_) {}
   }
 
+  Map<String, List<Item>> buildAlertsBuckets(
+    List<Item> items, {
+    required DateTime now,
+    int days = 3,
+    double? threshold,
+  }) {
+    // Use UTC and strip time-of-day: we compare by calendar date.
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final soonLimit = today.add(Duration(days: days)); // today + N days
+
+    final lowThresh = threshold;
+    final low = items
+        .where((i) => i.quantity <= (lowThresh ?? i.lowThreshold))
+        .toList();
+
+    final expired = <Item>[];
+    final expSoon = <Item>[];
+
+    for (final i in items) {
+      final exp = i.expirationDate;
+      if (exp == null) continue;
+
+      final expUtc = exp.toUtc();
+      final expDate = DateTime.utc(expUtc.year, expUtc.month, expUtc.day);
+
+      if (expDate.isBefore(today)) {
+        // Expiry date < today => expired
+        expired.add(i);
+      } else if (!expDate.isAfter(soonLimit)) {
+        // today <= expiry date <= today + days => expiring soon
+        expSoon.add(i);
+      }
+      // else: after soonLimit => ignore for expSoon/expired
+    }
+
+    final outOfStock = items.where((i) => i.quantity <= 0).toList();
+    final toBuy = items.where((i) => i.toBuy).toList();
+
+    return {
+      "low": low,
+      "expSoon": expSoon,
+      "expired": expired,
+      "outOfStock": outOfStock,
+      "toBuy": toBuy,
+    };
+  }
+
   Future<Map<String, List<Item>>> alertsLocal({
     int days = 3,
     double? threshold,
   }) async {
     try {
       final db = await _db;
-      final now = DateTime.now().toUtc();
-      final expLimit = now.add(Duration(days: days)).toIso8601String();
 
       final rows = await db.query("items");
-      final items = rows.map((r) => Item.fromDb(r)).toList(); // <- fromDb
+      final items = rows.map((r) => Item.fromDb(r)).toList();
 
-      final lowThresh = threshold;
-      final low = items
-          .where((i) => i.quantity <= (lowThresh ?? i.lowThreshold))
-          .toList();
-
-      final expSoon = items
-          .where(
-            (i) =>
-                i.expirationDate != null &&
-                i.expirationDate!.toUtc().isBefore(DateTime.parse(expLimit)),
-          )
-          .toList();
-
-      final outOfStock = items.where((i) => i.quantity <= 0).toList();
-      final toBuy = items.where((i) => i.toBuy).toList();
-
-      return {
-        "low": low,
-        "expSoon": expSoon,
-        "outOfStock": outOfStock,
-        "toBuy": toBuy,
-      };
+      final now = DateTime.now().toUtc();
+      return buildAlertsBuckets(
+        items,
+        now: now,
+        days: days,
+        threshold: threshold,
+      );
     } catch (_) {
-      return {"low": [], "expSoon": [], "outOfStock": [], "toBuy": []};
+      return {
+        "low": [],
+        "expSoon": [],
+        "expired": [],
+        "outOfStock": [],
+        "toBuy": [],
+      };
     }
   }
 

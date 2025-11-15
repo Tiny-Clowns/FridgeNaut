@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
@@ -10,12 +11,12 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  Map<String, List<dynamic>> _alerts = const {
-    "low": [],
-    "expSoon": [],
-    "expired": [],
-    "outOfStock": [],
-    "toBuy": [],
+  Map<String, List<Item>> _alerts = {
+    "low": <Item>[],
+    "expSoon": <Item>[],
+    "expired": <Item>[],
+    "outOfStock": <Item>[],
+    "toBuy": <Item>[],
   };
   bool _loading = true;
   String? _err;
@@ -39,13 +40,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       final repo = ref.read(repoProvider);
       final alerts = await repo.alertsLocal(days: 3);
 
-      // Merge with defaults to ensure all buckets exist.
       _alerts = {
-        "low": alerts["low"] ?? <dynamic>[],
-        "expSoon": alerts["expSoon"] ?? <dynamic>[],
-        "expired": alerts["expired"] ?? <dynamic>[],
-        "outOfStock": alerts["outOfStock"] ?? <dynamic>[],
-        "toBuy": alerts["toBuy"] ?? <dynamic>[],
+        "low": alerts["low"] ?? <Item>[],
+        "expSoon": alerts["expSoon"] ?? <Item>[],
+        "expired": alerts["expired"] ?? <Item>[],
+        "outOfStock": alerts["outOfStock"] ?? <Item>[],
+        "toBuy": alerts["toBuy"] ?? <Item>[],
       };
     } catch (e) {
       _err = e.toString();
