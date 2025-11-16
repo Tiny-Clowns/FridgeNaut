@@ -1,16 +1,18 @@
 # .github/workflows/project-in-review.yml
-name: "Project: In Review on PR"
+name: "Project: Issue status on PR"
+
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, edited]
-    branches: ["**"]
+    types: [opened, reopened, ready_for_review]
+    branches:
+      - "**"
   workflow_dispatch: {}
 
 env:
   PROJECT_URL: https://github.com/orgs/Tiny-Clowns/projects/6/views/1
 
 jobs:
-  move_in_review:
+  move_issue_status:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,6 +20,7 @@ jobs:
       pull-requests: read
       checks: read
       repository-projects: write
+
     steps:
       - name: App token
         id: app
@@ -33,22 +36,43 @@ jobs:
         with:
           github-token: ${{ steps.app.outputs.token }}
           script: |
-            const m = (process.env.PROJECT_URL||"").match(/\/orgs\/([^/]+)\/projects\/(\d+)/i);
+            const m = (process.env.PROJECT_URL || "").match(/\/orgs\/([^/]+)\/projects\/(\d+)/i);
             if (!m) return core.setFailed("Bad PROJECT_URL");
-            const owner = m[1], number = parseInt(m[2],10);
-            const r = await github.graphql(`query($o:String!,$n:Int!){
-              organization(login:$o){ projectV2(number:$n){
-                id
-                fields(first:50){ nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } }
-              }}}`, { o: owner, n: number });
-            const p = r.organization?.projectV2; if (!p) return core.setFailed("Project not found");
-            const status = (p.fields.nodes||[]).find(f=>f?.name==="Status");
-            const inRev = status?.options.find(o=>/in review/i.test(o.name));
-            core.setOutput("projectId", p.id);
-            core.setOutput("statusFieldId", status?.id||"");
-            core.setOutput("inRevId", inRev?.id||"");
 
-      - name: Move closing issues → In Review
+            const owner = m[1];
+            const number = parseInt(m[2], 10);
+
+            const r = await github.graphql(
+              `query($o:String!,$n:Int!){
+                organization(login:$o){
+                  projectV2(number:$n){
+                    id
+                    fields(first:50){
+                      nodes{
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options { id name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`,
+              { o: owner, n: number }
+            );
+
+            const p = r.organization?.projectV2;
+            if (!p) return core.setFailed("Project not found");
+
+            const status = (p.fields.nodes || []).find(f => f?.name === "Status");
+            const inRev = status?.options.find(o => /in review/i.test(o.name));
+
+            core.setOutput("projectId", p.id);
+            core.setOutput("statusFieldId", status?.id || "");
+            core.setOutput("inRevId", inRev?.id || "");
+
+      - name: Move issue(s) from PR commits → In Review
         if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' && steps.proj.outputs.inRevId != '' }}
         uses: actions/github-script@v7
         with:
@@ -56,40 +80,91 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
+
             const projectId = "${{ steps.proj.outputs.projectId }}";
             const fieldId   = "${{ steps.proj.outputs.statusFieldId }}";
             const inRevId   = "${{ steps.proj.outputs.inRevId }}";
 
-            const issueIds = new Set();
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info("No pull_request in context; nothing to do.");
+              return;
+            }
 
-            if (context.eventName === "pull_request") {
-              const prNumber = context.payload.pull_request.number;
-              const q = await github.graphql(`query($o:String!,$r:String!,$p:Int!){
-                repository(owner:$o,name:$r){
-                  pullRequest(number:$p){ closingIssuesReferences(first:50){ nodes{ id number } } }
-                }
-              }`, { o: owner, r: repo, p: prNumber });
-              for (const n of q.repository.pullRequest.closingIssuesReferences.nodes) issueIds.add(n.id);
-            } else {
-              for (const c of (context.payload.commits || [])) {
-                const msg = c.message || "";
-                for (const m of msg.matchAll(/#(\d{1,7})/g)) {
-                  const num = parseInt(m[1],10);
-                  const r = await github.graphql(`query($o:String!,$r:String!,$n:Int!){
-                    repository(owner:$o,name:$r){ issue(number:$n){ id } }
-                  }`, { o: owner, r: repo, n: num }).catch(()=>null);
-                  const id = r?.repository?.issue?.id; if (id) issueIds.add(id);
-                }
+            // Skip promotion PRs: develop -> test, test -> main
+            const base = (pr.base?.ref || "").toLowerCase();
+            const head = (pr.head?.ref || "").toLowerCase();
+
+            if (
+              (head === "develop" && base === "test") ||
+              (head === "test" && base === "main")
+            ) {
+              core.info(`Promotion PR ${head} -> ${base}, skip status update.`);
+              return;
+            }
+
+            const targetStatusId = inRevId;
+            if (!targetStatusId) {
+              core.info("In Review status option ID is empty; check project Status options.");
+              return;
+            }
+
+            const action = context.payload.action || "";
+            core.info(`PR action is '${action}', head='${head}', base='${base}' → using 'In Review' status.`);
+
+            // Load all commits for this PR
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100
+              }
+            );
+
+            const issueNumbers = new Set();
+
+            // Extract #123 from commit messages
+            for (const c of commits) {
+              const msg = c.commit?.message || "";
+              for (const m of msg.matchAll(/#(\d{1,7})/g)) {
+                issueNumbers.add(parseInt(m[1], 10));
               }
             }
 
-            for (const id of issueIds) {
-              const add = await github.graphql(`mutation($p:ID!,$c:ID!){
-                addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item{ id } }
-              }`, { p: projectId, c: id }).catch(()=>null);
-              const itemId = add?.addProjectV2ItemById?.item?.id; if (!itemId) continue;
-
-              await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
-                updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ clientMutationId }
-              }`, { p: projectId, i: itemId, f: fieldId, o: inRevId });
+            if (issueNumbers.size === 0) {
+              core.info("No #<issue> references found in PR commit messages.");
+              return;
             }
+
+            core.info(`Found issue references in commits: ${[...issueNumbers].join(", ")}`);
+
+            for (const num of issueNumbers) {
+              // Look up the issue node ID via GraphQL
+              const res = await github.graphql(
+                `query($o:String!,$r:String!,$n:Int!){
+                  repository(owner:$o,name:$r){
+                    issue(number:$n){ id }
+                  }
+                }`,
+                { o: owner, r: repo, n: num }
+              ).catch(() => null);
+
+              const issueId = res?.repository?.issue?.id;
+              if (!issueId) {
+                core.warning(`Issue #${num} not found in ${owner}/${repo}`);
+                continue;
+              }
+
+              // Add issue to project (no-op if already there), get project itemId
+              const addRes = await github.graphql(
+                `mutation($p:ID!,$c:ID!){
+                  addProjectV2ItemById(input:{projectId:$p,contentId:$c}){
+                    item{ id }
+                  }
+                }`,
+                { p: projectId, c: issueId }
+              ).catch(() => null);
+
+              const ite
