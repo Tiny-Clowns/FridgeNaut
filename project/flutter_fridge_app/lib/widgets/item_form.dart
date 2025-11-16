@@ -46,6 +46,14 @@ class _ItemFormState extends State<ItemForm> {
     super.dispose();
   }
 
+  String? _validateRequiredNonNegativeNumber(String? v) {
+    if (v == null || v.trim().isEmpty) return "Required";
+    final value = double.tryParse(v.trim());
+    if (value == null) return "Number";
+    if (value < 0) return "Min 0";
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -84,8 +92,7 @@ class _ItemFormState extends State<ItemForm> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      validator: (v) =>
-                          (double.tryParse(v ?? "") == null) ? "Number" : null,
+                      validator: _validateRequiredNonNegativeNumber,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -108,6 +115,7 @@ class _ItemFormState extends State<ItemForm> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      validator: _validateRequiredNonNegativeNumber,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -120,8 +128,7 @@ class _ItemFormState extends State<ItemForm> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      validator: (v) =>
-                          (double.tryParse(v ?? "") == null) ? "Number" : null,
+                      validator: _validateRequiredNonNegativeNumber,
                     ),
                   ),
                 ],
@@ -182,9 +189,11 @@ class _ItemFormState extends State<ItemForm> {
                     onPressed: () {
                       if (!_form.currentState!.validate()) return;
                       final now = DateTime.now().toUtc();
+
                       final qty = double.tryParse(_qty.text) ?? 0;
-                      final price = double.tryParse(_price.text);
-                      final low = double.tryParse(_low.text) ?? 1;
+                      final price = double.tryParse(_price.text) ?? 0;
+                      final low = double.tryParse(_low.text) ?? 0;
+
                       final id =
                           widget.existing?.id ??
                           DateTime.now().microsecondsSinceEpoch.toString();
