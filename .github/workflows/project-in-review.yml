@@ -194,34 +194,3 @@ jobs:
 
               core.info(`Updated Status for issue #${num} → In Review.`);
             }
-
-            core.info(`Found issue references in commits: ${[...issueNumbers].join(", ")}`);
-
-            for (const num of issueNumbers) {
-              // Look up the issue node ID via GraphQL
-              const res = await github.graphql(
-                `query($o:String!,$r:String!,$n:Int!){
-                  repository(owner:$o,name:$r){
-                    issue(number:$n){ id }
-                  }
-                }`,
-                { o: owner, r: repo, n: num }
-              ).catch(() => null);
-
-              const issueId = res?.repository?.issue?.id;
-              if (!issueId) {
-                core.warning(`Issue #${num} not found in ${owner}/${repo}`);
-                continue;
-              }
-
-              // Add issue to project (no-op if already there), get project itemId
-              const addRes = await github.graphql(
-                `mutation($p:ID!,$c:ID!){
-                  addProjectV2ItemById(input:{projectId:$p,contentId:$c}){
-                    item{ id }
-                  }
-                }`,
-                { p: projectId, c: issueId }
-              ).catch(() => null);
-
-              const ite
