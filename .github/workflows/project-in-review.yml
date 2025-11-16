@@ -110,7 +110,7 @@ jobs:
             }
 
             const action = context.payload.action || "";
-            core.info(`PR action is '${action}', head='${head}', base='${base}' → using 'In Review' status.`);
+            core.info(`PR action='${action}', head='${head}', base='${base}' → set In Review.`);
 
             // Load all commits for this PR
             const commits = await github.paginate(
@@ -167,4 +167,30 @@ jobs:
                 { p: projectId, c: issueId }
               ).catch(() => null);
 
-              const ite
+              const itemId = addRes?.addProjectV2ItemById?.item?.id;
+              if (!itemId) {
+                core.warning(`Could not add issue #${num} to project`);
+                continue;
+              }
+
+              // Update Status field for this project item to In Review
+              await github.graphql(
+                `mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$p,
+                      itemId:$i,
+                      fieldId:$f,
+                      value:{ singleSelectOptionId:$o }
+                    }
+                  ){
+                    clientMutationId
+                  }
+                }`,
+                { p: projectId, i: itemId, f: fieldId, o: targetStatusId }
+              ).catch(err => {
+                core.warning(`Failed to set status for issue #${num}: ${err}`);
+              });
+
+              core.info(`Updated Status for issue #${num} → In Review.`);
+            }
