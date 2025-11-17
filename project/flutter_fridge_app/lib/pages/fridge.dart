@@ -50,14 +50,67 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         onRefresh: _refresh,
         child: ListView.separated(
           itemCount: items.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
+          separatorBuilder: (_, index) => const Divider(height: 1),
           itemBuilder: (_, i) {
             final it = items[i];
+
+            // Quantity logic
+            final bool isLowOrEqualThreshold = it.quantity <= it.lowThreshold;
+            final bool isZeroQuantity = it.quantity <= 0;
+
+            // Expiry logic
+            bool isExpired = false;
+            bool isExpiringSoon = false;
+            String? expiryText;
+
+            if (it.expirationDate != null) {
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+
+              final localExp = it.expirationDate!.toLocal();
+              final expDateOnly = DateTime(
+                localExp.year,
+                localExp.month,
+                localExp.day,
+              );
+
+              final daysDiff = expDateOnly.difference(today).inDays;
+              isExpired = daysDiff < 0;
+              isExpiringSoon = !isExpired && daysDiff <= 3; // tweak if needed
+
+              expiryText =
+                  "exp ${expDateOnly.toIso8601String().substring(0, 10)}";
+            }
+
             return ListTile(
-              title: Text(it.name),
-              subtitle: Text(
-                "${it.quantity} ${it.unit}"
-                "${it.expirationDate != null ? " · exp ${it.expirationDate!.toLocal().toIso8601String().substring(0, 10)}" : ""}",
+              // Food name: always black, bigger
+              title: Text(
+                it.name,
+                style: const TextStyle(color: Colors.black, fontSize: 18),
+              ),
+              subtitle: Text.rich(
+                TextSpan(
+                  children: [
+                    // Quantity + unit
+                    TextSpan(
+                      text: "${it.quantity} ${it.unit}",
+                      style: isLowOrEqualThreshold
+                          ? const TextStyle(color: Colors.red)
+                          : null,
+                    ),
+                    if (expiryText != null) ...[
+                      const TextSpan(text: " | "),
+                      TextSpan(
+                        text: expiryText,
+                        style: isExpired
+                            ? const TextStyle(color: Colors.red)
+                            : isExpiringSoon
+                            ? const TextStyle(color: Colors.orange)
+                            : null,
+                      ),
+                    ],
+                  ],
+                ),
               ),
               onTap: () async {
                 await _editItem(it);
@@ -66,13 +119,19 @@ class _FridgePageState extends ConsumerState<FridgePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.remove),
+                    icon: Icon(isZeroQuantity ? Icons.delete : Icons.remove),
+                    color: Colors.red, // minus / bin in red
                     onPressed: () async {
-                      await _adjust(it, -1);
+                      if (isZeroQuantity) {
+                        await _deleteItem(it);
+                      } else {
+                        await _adjust(it, -1);
+                      }
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
+                    color: Colors.green, // plus in green
                     onPressed: () async {
                       await _adjust(it, 1);
                     },
@@ -100,10 +159,8 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     );
     if (item == null) return;
 
-    // Persist item
     await ref.read(repoProvider).upsertItem(item);
 
-    // Seed inventory with initial quantity as a "Purchase"
     if (item.quantity != 0) {
       final e = InventoryEvent(
         id: _genId(),
@@ -167,16 +224,20 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       synced: false,
     );
 
-    // write event + persist quantity in one transaction
     await ref.read(repoProvider).applyEventLocally(e);
-
-    // refresh list from DB so UI reflects persisted value
     await _load();
 
-    // try to sync in background
     try {
       await ref.read(syncProvider).syncOnce();
     } catch (_) {}
+  }
+
+  Future<void> _deleteItem(Item it) async {
+    await ref.read(repoProvider).deleteItem(it.id);
+    try {
+      await ref.read(syncProvider).syncOnce();
+    } catch (_) {}
+    await _load();
   }
 
   String _genId() => DateTime.now().microsecondsSinceEpoch.toString();
