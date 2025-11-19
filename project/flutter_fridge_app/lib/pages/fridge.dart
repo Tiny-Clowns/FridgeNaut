@@ -14,14 +14,31 @@ class FridgePage extends ConsumerStatefulWidget {
   ConsumerState<FridgePage> createState() => _FridgePageState();
 }
 
+enum _ItemFilter { all, lowStock, expiringSoon, expired, outOfStock }
+
 class _FridgePageState extends ConsumerState<FridgePage> {
   List<Item> items = [];
   bool loading = true;
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+  _ItemFilter _activeFilter = _ItemFilter.all;
+
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -55,9 +72,105 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     return CircleAvatar(backgroundImage: FileImage(file));
   }
 
+  List<Item> get _filteredItems {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return items.where((it) {
+      // Search by name
+      final q = _searchQuery.trim().toLowerCase();
+      if (q.isNotEmpty && !it.name.toLowerCase().contains(q)) {
+        return false;
+      }
+
+      // Compute quantity flags
+      final bool isLowOrEqualThreshold = it.quantity <= it.lowThreshold;
+      final bool isZeroQuantity = it.quantity <= 0;
+
+      // Compute expiry flags
+      bool isExpired = false;
+      bool isExpiringSoon = false;
+      if (it.expirationDate != null) {
+        final localExp = it.expirationDate!.toLocal();
+        final expDateOnly = DateTime(
+          localExp.year,
+          localExp.month,
+          localExp.day,
+        );
+        final daysDiff = expDateOnly.difference(today).inDays;
+        isExpired = daysDiff < 0;
+        isExpiringSoon = !isExpired && daysDiff <= 3;
+      }
+
+      switch (_activeFilter) {
+        case _ItemFilter.all:
+          return true;
+        case _ItemFilter.lowStock:
+          return isLowOrEqualThreshold && !isZeroQuantity;
+        case _ItemFilter.expiringSoon:
+          return isExpiringSoon;
+        case _ItemFilter.expired:
+          return isExpired;
+        case _ItemFilter.outOfStock:
+          return isZeroQuantity;
+      }
+    }).toList();
+  }
+
+  Widget _buildFilterChips() {
+    Widget chip(_ItemFilter filter, String label) {
+      final selected = _activeFilter == filter;
+      return ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) {
+          setState(() {
+            _activeFilter = filter;
+          });
+        },
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      children: [
+        chip(_ItemFilter.all, "All"),
+        chip(_ItemFilter.lowStock, "Low stock"),
+        chip(_ItemFilter.expiringSoon, "Expiring soon"),
+        chip(_ItemFilter.expired, "Expired"),
+        chip(_ItemFilter.outOfStock, "Out of stock"),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              hintText: "Search food items",
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildFilterChips(),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator());
+
+    final visibleItems = _filteredItems;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Fridge"),
@@ -66,10 +179,16 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView.separated(
-          itemCount: items.length,
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: visibleItems.length + 1, // +1 for header
           separatorBuilder: (_, index) => const Divider(height: 1),
           itemBuilder: (_, i) {
-            final it = items[i];
+            if (i == 0) {
+              // Search bar + filter buttons
+              return _buildHeader();
+            }
+
+            final it = visibleItems[i - 1];
 
             // Quantity logic
             final bool isLowOrEqualThreshold = it.quantity <= it.lowThreshold;
@@ -100,10 +219,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
             }
 
             return ListTile(
-              // Picture on the left
               leading: _buildItemImage(it),
-
-              // Food name: always black, bigger
               title: Text(
                 it.name,
                 style: const TextStyle(color: Colors.black, fontSize: 18),
@@ -111,7 +227,6 @@ class _FridgePageState extends ConsumerState<FridgePage> {
               subtitle: Text.rich(
                 TextSpan(
                   children: [
-                    // Quantity + unit
                     TextSpan(
                       text: "${it.quantity} ${it.unit}",
                       style: isLowOrEqualThreshold
@@ -140,7 +255,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
                 children: [
                   IconButton(
                     icon: Icon(isZeroQuantity ? Icons.delete : Icons.remove),
-                    color: Colors.red, // minus / bin in red
+                    color: Colors.red,
                     onPressed: () async {
                       if (isZeroQuantity) {
                         await _deleteItem(it);
@@ -151,7 +266,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    color: Colors.green, // plus in green
+                    color: Colors.green,
                     onPressed: () async {
                       await _adjust(it, 1);
                     },
