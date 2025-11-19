@@ -1,16 +1,23 @@
 import "dart:async";
+import "package:flutter_fridge_app/data/migrations/migration_runner.dart";
 import "package:path/path.dart" as p;
 import "package:path_provider/path_provider.dart";
 import "package:sqflite/sqflite.dart";
 
 // Local database
 class AppDb {
+  static const _dbVersion = 2;
   static Database? _db;
   static Future<Database> get instance async {
     if (_db != null) return _db!;
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, "fridge.db");
-    _db = await openDatabase(path, version: 1, onCreate: _onCreate);
+    _db = await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: _onCreate,
+      onUpgrade: MigrationRunner.onUpgrade,
+    );
     return _db!;
   }
 

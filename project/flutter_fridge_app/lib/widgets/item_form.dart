@@ -1,4 +1,7 @@
+import "dart:io";
+
 import "package:flutter/material.dart";
+import "package:image_picker/image_picker.dart";
 import "package:flutter_fridge_app/models/item.dart";
 
 class ItemForm extends StatefulWidget {
@@ -21,6 +24,9 @@ class _ItemFormState extends State<ItemForm> {
   bool _notifyLow = true;
   bool _notifyExp = true;
 
+  final ImagePicker _picker = ImagePicker();
+  String? _imagePath;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +40,7 @@ class _ItemFormState extends State<ItemForm> {
     _toBuy = it?.toBuy ?? false;
     _notifyLow = it?.notifyOnLow ?? true;
     _notifyExp = it?.notifyOnExpire ?? true;
+    _imagePath = it?.imagePath;
   }
 
   @override
@@ -52,6 +59,20 @@ class _ItemFormState extends State<ItemForm> {
     if (value == null) return "Number";
     if (value < 0) return "Min 0";
     return null;
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      setState(() {
+        _imagePath = picked.path;
+      });
+    }
   }
 
   @override
@@ -77,6 +98,36 @@ class _ItemFormState extends State<ItemForm> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Image selector
+              Center(
+                child: InkWell(
+                  onTap: _pickImage,
+                  borderRadius: BorderRadius.circular(40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundImage:
+                            (_imagePath != null && _imagePath!.isNotEmpty)
+                            ? FileImage(File(_imagePath!))
+                            : null,
+                        child: (_imagePath == null || _imagePath!.isEmpty)
+                            ? const Icon(Icons.camera_alt)
+                            : null,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _imagePath == null ? "Add picture" : "Change picture",
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               TextFormField(
                 controller: _name,
                 decoration: const InputDecoration(labelText: "Name"),
@@ -213,6 +264,7 @@ class _ItemFormState extends State<ItemForm> {
                         lowThreshold: low,
                         createdAt: widget.existing?.createdAt ?? now,
                         updatedAt: now,
+                        imagePath: _imagePath,
                       );
                       Navigator.pop(context, item);
                     },

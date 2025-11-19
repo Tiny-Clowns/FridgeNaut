@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
@@ -38,6 +40,21 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     await _load();
   }
 
+  // NEW: thumbnail builder for each item
+  Widget _buildItemImage(Item it) {
+    final path = it.imagePath;
+    if (path == null || path.isEmpty) {
+      return const CircleAvatar(child: Icon(Icons.fastfood));
+    }
+
+    final file = File(path);
+    if (!file.existsSync()) {
+      return const CircleAvatar(child: Icon(Icons.fastfood));
+    }
+
+    return CircleAvatar(backgroundImage: FileImage(file));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator());
@@ -76,13 +93,16 @@ class _FridgePageState extends ConsumerState<FridgePage> {
 
               final daysDiff = expDateOnly.difference(today).inDays;
               isExpired = daysDiff < 0;
-              isExpiringSoon = !isExpired && daysDiff <= 3; // tweak if needed
+              isExpiringSoon = !isExpired && daysDiff <= 3;
 
               expiryText =
                   "exp ${expDateOnly.toIso8601String().substring(0, 10)}";
             }
 
             return ListTile(
+              // Picture on the left
+              leading: _buildItemImage(it),
+
               // Food name: always black, bigger
               title: Text(
                 it.name,

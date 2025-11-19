@@ -12,6 +12,9 @@ class Item {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // NEW: optional local path to the image file
+  final String? imagePath;
+
   const Item({
     required this.id,
     required this.name,
@@ -25,6 +28,7 @@ class Item {
     this.lowThreshold = 1.0,
     required this.createdAt,
     required this.updatedAt,
+    this.imagePath,
   });
 
   Item copyWith({
@@ -40,6 +44,7 @@ class Item {
     double? lowThreshold,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? imagePath,
   }) {
     return Item(
       id: id ?? this.id,
@@ -54,6 +59,7 @@ class Item {
       lowThreshold: lowThreshold ?? this.lowThreshold,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      imagePath: imagePath ?? this.imagePath,
     );
   }
 
@@ -75,6 +81,7 @@ class Item {
     lowThreshold: (j["lowThreshold"] ?? 1).toDouble(),
     createdAt: DateTime.parse(j["createdAt"]),
     updatedAt: DateTime.parse(j["updatedAt"]),
+    imagePath: j["imagePath"] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -90,6 +97,7 @@ class Item {
     "lowThreshold": lowThreshold,
     "createdAt": createdAt.toIso8601String(),
     "updatedAt": updatedAt.toIso8601String(),
+    "imagePath": imagePath,
   };
 
   // ----- SQLite (DB) -----
@@ -106,6 +114,7 @@ class Item {
     "lowThreshold": lowThreshold,
     "createdAt": createdAt.toIso8601String(),
     "updatedAt": updatedAt.toIso8601String(),
+    "imagePath": imagePath,
   };
 
   factory Item.fromDb(Map<String, Object?> r) => Item(
@@ -125,5 +134,6 @@ class Item {
     lowThreshold: (r["lowThreshold"] as num).toDouble(),
     createdAt: DateTime.parse(r["createdAt"] as String),
     updatedAt: DateTime.parse(r["updatedAt"] as String),
+    imagePath: r["imagePath"] as String?, // NEW
   );
 }
