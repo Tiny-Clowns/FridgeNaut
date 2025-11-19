@@ -12,6 +12,7 @@ class ReportsPage extends ConsumerStatefulWidget {
 class _ReportsPageState extends ConsumerState<ReportsPage> {
   Map<String, num>? _weekly;
   Map<String, num>? _monthly;
+  Map<String, num>? _annual;
   bool _loading = true;
   String? _err;
 
@@ -33,6 +34,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       final repo = ref.read(repoProvider);
       _weekly = await repo.reportLocal("weekly");
       _monthly = await repo.reportLocal("monthly");
+      _annual = await repo.reportLocal("annual");
     } catch (e) {
       _err = e.toString();
     } finally {
@@ -62,7 +64,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          children: [_card("Weekly", _weekly), _card("Monthly", _monthly)],
+          children: [
+            _card("Weekly", _weekly),
+            _card("Monthly", _monthly),
+            _card("Annual", _annual),
+          ],
         ),
       ),
     );
