@@ -123,7 +123,16 @@ jobs:
         run: flutter test
 
       - name: Build debug APK (verification only)
-        if: steps.detect.outputs.flutter == 'true'
+        if: ${{ steps.detect.outputs.flutter == 'true' && (
+          (github.event_name == 'push' &&
+          (github.ref == 'refs/heads/develop' ||
+          github.ref == 'refs/heads/test' ||
+          github.ref == 'refs/heads/main')) ||
+          (github.event_name == 'pull_request' &&
+          (github.base_ref == 'develop' ||
+          github.base_ref == 'test' ||
+          github.base_ref == 'main'))
+          ) }}
         working-directory: project/flutter_fridge_app
         run: flutter build apk --debug --no-shrink
 
