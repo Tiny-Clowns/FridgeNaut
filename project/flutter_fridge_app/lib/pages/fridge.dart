@@ -9,7 +9,10 @@ import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
-  const FridgePage({super.key});
+  final String? initialFilter;
+
+  const FridgePage({super.key, this.initialFilter});
+
   @override
   ConsumerState<FridgePage> createState() => _FridgePageState();
 }
@@ -27,12 +30,35 @@ class _FridgePageState extends ConsumerState<FridgePage> {
   @override
   void initState() {
     super.initState();
+
+    _applyInitialFilter();
+
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
       });
     });
+
     _load();
+  }
+
+  void _applyInitialFilter() {
+    switch (widget.initialFilter) {
+      case "low":
+        _activeFilter = _ItemFilter.lowStock;
+        break;
+      case "expSoon":
+        _activeFilter = _ItemFilter.expiringSoon;
+        break;
+      case "expired":
+        _activeFilter = _ItemFilter.expired;
+        break;
+      case "outOfStock":
+        _activeFilter = _ItemFilter.outOfStock;
+        break;
+      default:
+        _activeFilter = _ItemFilter.all;
+    }
   }
 
   @override
@@ -57,7 +83,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     await _load();
   }
 
-  // NEW: thumbnail builder for each item
+  // Thumbnail builder for each item
   Widget _buildItemImage(Item it) {
     final path = it.imagePath;
     if (path == null || path.isEmpty) {
@@ -83,11 +109,11 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         return false;
       }
 
-      // Compute quantity flags
+      // Quantity flags
       final bool isLowOrEqualThreshold = it.quantity <= it.lowThreshold;
       final bool isZeroQuantity = it.quantity <= 0;
 
-      // Compute expiry flags
+      // Expiry flags
       bool isExpired = false;
       bool isExpiringSoon = false;
       if (it.expirationDate != null) {
@@ -180,11 +206,10 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         onRefresh: _refresh,
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: visibleItems.length + 1, // +1 for header
-          separatorBuilder: (_, index) => const Divider(height: 1),
+          itemCount: visibleItems.length + 1,
+          separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (_, i) {
             if (i == 0) {
-              // Search bar + filter buttons
               return _buildHeader();
             }
 

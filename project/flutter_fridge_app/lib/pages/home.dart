@@ -3,6 +3,7 @@ import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
+import "package:flutter_fridge_app/pages/fridge.dart";
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -83,10 +84,52 @@ class _HomePageState extends ConsumerState<HomePage> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
-            _stat("Low stock", low),
-            _stat("Expiring soon", expSoon),
-            _stat("Expired", expired),
-            _stat("Out of stock", oos),
+            _stat(
+              "Low stock",
+              low,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FridgePage(initialFilter: "low"),
+                  ),
+                );
+              },
+            ),
+            _stat(
+              "Expiring soon",
+              expSoon,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FridgePage(initialFilter: "expSoon"),
+                  ),
+                );
+              },
+            ),
+            _stat(
+              "Expired",
+              expired,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FridgePage(initialFilter: "expired"),
+                  ),
+                );
+              },
+            ),
+            _stat(
+              "Out of stock",
+              oos,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const FridgePage(initialFilter: "outOfStock"),
+                  ),
+                );
+              },
+            ),
+            // Planned to buy: no navigation
             _stat("Planned to buy", buy),
           ],
         ),
@@ -94,13 +137,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _stat(String label, int count) => Card(
+  Widget _stat(String label, int count, {VoidCallback? onTap}) => Card(
     child: ListTile(
       title: Text(label),
       trailing: Text(
         "$count",
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
+      onTap: onTap,
     ),
   );
 }
