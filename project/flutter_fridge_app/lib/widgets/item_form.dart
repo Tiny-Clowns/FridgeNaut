@@ -61,6 +61,18 @@ class _ItemFormState extends State<ItemForm> {
     return null;
   }
 
+  bool get _isPastExpiry {
+    if (_exp == null) return false;
+
+    final now = DateTime.now().toUtc();
+    final todayUtc = DateTime.utc(now.year, now.month, now.day);
+
+    final expUtc = _exp!.toUtc();
+    final expDateOnly = DateTime.utc(expUtc.year, expUtc.month, expUtc.day);
+
+    return expDateOnly.isBefore(todayUtc);
+  }
+
   Future<void> _pickImage() async {
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -213,6 +225,13 @@ class _ItemFormState extends State<ItemForm> {
                   },
                 ),
               ),
+              if (_isPastExpiry) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  "Note: this expiration date is in the past.",
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              ],
               SwitchListTile(
                 title: const Text("Planned to buy"),
                 value: _toBuy,
