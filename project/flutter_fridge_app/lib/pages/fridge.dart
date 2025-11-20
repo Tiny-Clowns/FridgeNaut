@@ -252,12 +252,24 @@ class _FridgePageState extends ConsumerState<FridgePage> {
               subtitle: Text.rich(
                 TextSpan(
                   children: [
+                    // quantity + unit (with red when low)
                     TextSpan(
                       text: "${it.quantity} ${it.unit}",
                       style: isLowOrEqualThreshold
                           ? const TextStyle(color: Colors.red)
                           : null,
                     ),
+
+                    // price per unit, if present
+                    if (it.pricePerUnit != null) ...[
+                      const TextSpan(text: " | "),
+                      TextSpan(
+                        text:
+                            "${it.pricePerUnit!.toStringAsFixed(2)} / ${it.unit}",
+                      ),
+                    ],
+
+                    // expiry text, if present
                     if (expiryText != null) ...[
                       const TextSpan(text: " | "),
                       TextSpan(
