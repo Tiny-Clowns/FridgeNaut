@@ -110,7 +110,7 @@ class Repo {
   Map<String, List<Item>> buildAlertsBuckets(
     List<Item> items, {
     required DateTime now,
-    int days = 3,
+    required int days,
     double? threshold,
   }) {
     // Use UTC and strip time-of-day: we compare by calendar date.
@@ -155,7 +155,7 @@ class Repo {
   }
 
   Future<Map<String, List<Item>>> alertsLocal({
-    int days = 3,
+    required int days,
     double? threshold,
   }) async {
     try {

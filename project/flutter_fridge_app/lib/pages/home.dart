@@ -4,6 +4,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -39,7 +40,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
     try {
       final repo = ref.read(repoProvider);
-      final alerts = await repo.alertsLocal(days: 3);
+      final prefs = await SharedPreferences.getInstance();
+      final expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
+      final alerts = await repo.alertsLocal(days: expirySoonDays);
 
       _alerts = {
         "low": alerts["low"] ?? <Item>[],

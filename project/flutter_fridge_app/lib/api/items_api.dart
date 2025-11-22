@@ -12,6 +12,7 @@ class ItemsApi {
         .toList();
   }
 
+  // unused lol
   Future<Map<String, dynamic>> alerts({int days = 3, double? threshold}) async {
     final r = await _dio.get(
       "/api/items/alerts",
