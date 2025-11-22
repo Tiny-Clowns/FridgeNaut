@@ -8,6 +8,7 @@ import "package:flutter_fridge_app/data/repository.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/sync/sync_manager.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 class FakeRepo extends Repo {
   @override
@@ -72,6 +73,7 @@ void main() {
   ) async {
     final fakeRepo = FakeRepo();
     final fakeSync = FakeSyncManager(fakeRepo);
+    SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(
       ProviderScope(
