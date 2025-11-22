@@ -7,6 +7,7 @@ import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/models/inventory_event.dart";
 import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
   final String? initialFilter;
@@ -27,6 +28,8 @@ class _FridgePageState extends ConsumerState<FridgePage> {
   String _searchQuery = "";
   _ItemFilter _activeFilter = _ItemFilter.all;
 
+  int expirySoonDays = 3;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +41,11 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         _searchQuery = _searchController.text;
       });
     });
+
+    // if want, could move to `_load` but i am not sure
+    SharedPreferences.getInstance().then(
+      (p) => expirySoonDays = p.getInt("expiry_soon_days") ?? 3,
+    );
 
     _load();
   }
@@ -125,7 +133,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         );
         final daysDiff = expDateOnly.difference(today).inDays;
         isExpired = daysDiff < 0;
-        isExpiringSoon = !isExpired && daysDiff <= 3;
+        isExpiringSoon = !isExpired && daysDiff <= expirySoonDays;
       }
 
       switch (_activeFilter) {
@@ -237,7 +245,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
 
               final daysDiff = expDateOnly.difference(today).inDays;
               isExpired = daysDiff < 0;
-              isExpiringSoon = !isExpired && daysDiff <= 3;
+              isExpiringSoon = !isExpired && daysDiff <= expirySoonDays;
 
               expiryText =
                   "exp ${expDateOnly.toIso8601String().substring(0, 10)}";

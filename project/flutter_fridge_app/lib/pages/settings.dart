@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -10,7 +11,8 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final ctrl = TextEditingController();
+  final serverUrlTextController = TextEditingController();
+  final expirySoonDaysTextController = TextEditingController();
   String saved = "";
 
   bool _loading = true;
@@ -53,7 +55,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   void dispose() {
-    ctrl.dispose();
+    serverUrlTextController.dispose();
     super.dispose();
   }
 
@@ -77,32 +79,45 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final yearStartMonth = p.getInt("year_start_month") ?? 1; // January
     final yearStartDay = p.getInt("year_start_day") ?? 1; // 1st
 
+    final expirySoonDays = p.getInt("expiry_soon_days") ?? 3;
+
     final clampedWeekStart = weekStart.clamp(0, 6);
     final clampedMonthStart = monthStart.clamp(1, 31);
     final clampedYearStartMonth = yearStartMonth.clamp(1, 12);
     final maxYearStartDay = _daysInMonth(clampedYearStartMonth);
     final clampedYearStartDay = yearStartDay.clamp(1, maxYearStartDay);
 
+    serverUrlTextController.text = url;
+    saved = url;
+    _weekStartDayIndex = clampedWeekStart;
+    _monthStartDay = clampedMonthStart;
+    _yearStartMonth = clampedYearStartMonth;
+    _yearStartDay = clampedYearStartDay;
+
+    expirySoonDaysTextController.text = expirySoonDays.toString();
+
     setState(() {
-      ctrl.text = url;
-      saved = url;
-      _weekStartDayIndex = clampedWeekStart;
-      _monthStartDay = clampedMonthStart;
-      _yearStartMonth = clampedYearStartMonth;
-      _yearStartDay = clampedYearStartDay;
       _loading = false;
     });
   }
 
   Future<void> _save() async {
     final p = await SharedPreferences.getInstance();
-    final trimmedUrl = ctrl.text.trim();
+    final trimmedUrl = serverUrlTextController.text.trim();
 
     await p.setString("server_base_url", trimmedUrl);
     await p.setInt("week_start_day", _weekStartDayIndex);
     await p.setInt("month_start_day", _monthStartDay);
     await p.setInt("year_start_month", _yearStartMonth);
     await p.setInt("year_start_day", _yearStartDay);
+
+    final expirySoonDays =
+        int.tryParse(expirySoonDaysTextController.text.trim()) ?? 3;
+    await p.setInt("expiry_soon_days", expirySoonDays);
+
+    if (expirySoonDaysTextController.text == "") {
+      expirySoonDaysTextController.text = expirySoonDays.toString();
+    }
 
     setState(() => saved = trimmedUrl);
 
@@ -133,7 +148,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: ListView(
           children: [
             TextField(
-              controller: ctrl,
+              controller: serverUrlTextController,
               decoration: const InputDecoration(
                 labelText: "Server Base URL",
                 helperText: "Example: http://192.168.1.10:5000",
@@ -236,6 +251,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     },
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            // Extra?
+            Text("Extra :)", style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: expirySoonDaysTextController,
+              decoration: const InputDecoration(
+                labelText: "Expiry Soon Days",
+                helperText: "Between 1 and 1000 please. Default is 3",
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                TextInputFormatter.withFunction((oldValue, newValue) {
+                  // only allow numbers between 1 and 1000
+                  if (newValue.text.isEmpty) return newValue;
+                  final n = int.tryParse(newValue.text);
+                  if (n == null || n < 1 || n > 1000) return oldValue;
+                  return newValue;
+                }),
               ],
             ),
             const SizedBox(height: 24),

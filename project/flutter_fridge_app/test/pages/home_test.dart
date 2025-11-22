@@ -12,7 +12,7 @@ import "package:flutter_fridge_app/sync/sync_manager.dart";
 class FakeRepo extends Repo {
   @override
   Future<Map<String, List<Item>>> alertsLocal({
-    int days = 3,
+    required int days,
     double? threshold,
   }) async {
     final now = DateTime.utc(2025, 1, 1);

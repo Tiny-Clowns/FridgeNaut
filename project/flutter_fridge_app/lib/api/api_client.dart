@@ -42,6 +42,7 @@ class ApiClient {
   // Typed facades
   Future<List<Item>> getItemsSince(DateTime since) => items.getSince(since);
 
+  // unused lol
   Future<Map<String, dynamic>> getAlerts({int days = 3, double? threshold}) =>
       items.alerts(days: days, threshold: threshold);
 
