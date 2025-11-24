@@ -35,7 +35,8 @@ class AppDb {
         notifyOnExpire INTEGER NOT NULL,
         lowThreshold REAL NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        imagePath TEXT NULL
       );
     """);
 

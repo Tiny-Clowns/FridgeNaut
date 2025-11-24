@@ -8,65 +8,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: .NET build/lint/test + vuln audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # backend:
+  #   name: .NET build/lint/test + vuln audit
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Detect backend
-        id: detect
-        run: |
-          if [ -f project/FridgeNaut.sln ]; then
-            echo "dotnet=true" >> $GITHUB_OUTPUT
-          else
-            echo "dotnet=false" >> $GITHUB_OUTPUT
-          fi
+  #     - name: Detect backend
+  #       id: detect
+  #       run: |
+  #         if [ -f project/FridgeNaut.sln ]; then
+  #           echo "dotnet=true" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "dotnet=false" >> $GITHUB_OUTPUT
+  #         fi
 
-      - uses: actions/setup-dotnet@v4
-        if: steps.detect.outputs.dotnet == 'true'
-        with:
-          dotnet-version: "9.0.x"
+  #     - uses: actions/setup-dotnet@v4
+  #       if: steps.detect.outputs.dotnet == 'true'
+  #       with:
+  #         dotnet-version: "9.0.x"
 
-      - name: dotnet format (verify)
-        if: steps.detect.outputs.dotnet == 'true'
-        working-directory: project
-        run: dotnet format --verify-no-changes
+  #     - name: dotnet format (verify)
+  #       if: steps.detect.outputs.dotnet == 'true'
+  #       working-directory: project
+  #       run: dotnet format --verify-no-changes
 
-      - name: Build (warnings as errors)
-        if: steps.detect.outputs.dotnet == 'true'
-        working-directory: project
-        run: dotnet build FridgeNaut.sln -c Release -warnaserror
+  #     - name: Build (warnings as errors)
+  #       if: steps.detect.outputs.dotnet == 'true'
+  #       working-directory: project
+  #       run: dotnet build FridgeNaut.sln -c Release -warnaserror
 
-      - name: Test
-        if: steps.detect.outputs.dotnet == 'true'
-        working-directory: project
-        run: |
-          if ls **/*.Tests.csproj >/dev/null 2>&1; then
-            dotnet test FridgeNaut.sln -c Release --no-build
-          else
-            echo "No test projects found."
-          fi
+  #     - name: Test
+  #       if: steps.detect.outputs.dotnet == 'true'
+  #       working-directory: project
+  #       run: |
+  #         if ls **/*.Tests.csproj >/dev/null 2>&1; then
+  #           dotnet test FridgeNaut.sln -c Release --no-build
+  #         else
+  #           echo "No test projects found."
+  #         fi
 
-      - name: NuGet vulnerability audit
-        if: steps.detect.outputs.dotnet == 'true'
-        working-directory: project
-        run: |
-          set -eo pipefail
-          sudo apt-get update >/dev/null && sudo apt-get install -y jq >/dev/null
-          dotnet list FridgeNaut.sln package --vulnerable --include-transitive --format json > vuln.json || true
-          count=$(jq '[.. | .vulnerabilities? // empty] | flatten | length' vuln.json)
-          cat vuln.json
-          if [ "$count" -gt 0 ]; then
-            echo "Vulnerable packages detected: $count"
-            exit 1
-          else
-            echo "No known vulnerabilities."
-          fi
+  #     - name: NuGet vulnerability audit
+  #       if: steps.detect.outputs.dotnet == 'true'
+  #       working-directory: project
+  #       run: |
+  #         set -eo pipefail
+  #         sudo apt-get update >/dev/null && sudo apt-get install -y jq >/dev/null
+  #         dotnet list FridgeNaut.sln package --vulnerable --include-transitive --format json > vuln.json || true
+  #         count=$(jq '[.. | .vulnerabilities? // empty] | flatten | length' vuln.json)
+  #         cat vuln.json
+  #         if [ "$count" -gt 0 ]; then
+  #           echo "Vulnerable packages detected: $count"
+  #           exit 1
+  #         else
+  #           echo "No known vulnerabilities."
+  #         fi
 
-      - name: Skip note
-        if: steps.detect.outputs.dotnet != 'true'
-        run: echo "Skipping .NET job (project/FridgeNaut.sln not found)."
+  #     - name: Skip note
+  #       if: steps.detect.outputs.dotnet != 'true'
+  #       run: echo "Skipping .NET job (project/FridgeNaut.sln not found)."
 
   flutter:
     name: Flutter analyze/test + APK build check

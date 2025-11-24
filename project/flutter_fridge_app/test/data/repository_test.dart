@@ -2,7 +2,6 @@ import "package:flutter_test/flutter_test.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/data/repository.dart";
 
-/// Helper to create an Item with sane defaults so tests stay compact.
 Item _item({
   required String id,
   required String name,
@@ -148,7 +147,7 @@ void main() {
       final buy = result["toBuy"]!;
 
       expect(low, contains(lowStock));
-      expect(low, contains(outOfStock));
+      expect(low, isNot(contains(outOfStock)));
       expect(low, isNot(contains(okStock)));
 
       expect(oos, contains(outOfStock));

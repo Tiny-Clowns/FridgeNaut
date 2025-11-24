@@ -1,6 +1,6 @@
+// lib/pages/settings.dart
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
-import "package:flutter_fridge_app/main.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
@@ -11,9 +11,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final serverUrlTextController = TextEditingController();
   final expirySoonDaysTextController = TextEditingController();
-  String saved = "";
 
   bool _loading = true;
 
@@ -55,7 +53,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   void dispose() {
-    serverUrlTextController.dispose();
+    expirySoonDaysTextController.dispose();
     super.dispose();
   }
 
@@ -72,13 +70,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     });
 
     final p = await SharedPreferences.getInstance();
-    final url = p.getString("server_base_url") ?? "http://127.0.0.1:5000";
 
     final weekStart = p.getInt("week_start_day") ?? 0; // Sunday
     final monthStart = p.getInt("month_start_day") ?? 1; // 1st
     final yearStartMonth = p.getInt("year_start_month") ?? 1; // January
     final yearStartDay = p.getInt("year_start_day") ?? 1; // 1st
-
     final expirySoonDays = p.getInt("expiry_soon_days") ?? 3;
 
     final clampedWeekStart = weekStart.clamp(0, 6);
@@ -87,25 +83,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final maxYearStartDay = _daysInMonth(clampedYearStartMonth);
     final clampedYearStartDay = yearStartDay.clamp(1, maxYearStartDay);
 
-    serverUrlTextController.text = url;
-    saved = url;
-    _weekStartDayIndex = clampedWeekStart;
-    _monthStartDay = clampedMonthStart;
-    _yearStartMonth = clampedYearStartMonth;
-    _yearStartDay = clampedYearStartDay;
-
-    expirySoonDaysTextController.text = expirySoonDays.toString();
-
     setState(() {
+      _weekStartDayIndex = clampedWeekStart;
+      _monthStartDay = clampedMonthStart;
+      _yearStartMonth = clampedYearStartMonth;
+      _yearStartDay = clampedYearStartDay;
+      expirySoonDaysTextController.text = expirySoonDays.toString();
       _loading = false;
     });
   }
 
   Future<void> _save() async {
     final p = await SharedPreferences.getInstance();
-    final trimmedUrl = serverUrlTextController.text.trim();
 
-    await p.setString("server_base_url", trimmedUrl);
     await p.setInt("week_start_day", _weekStartDayIndex);
     await p.setInt("month_start_day", _monthStartDay);
     await p.setInt("year_start_month", _yearStartMonth);
@@ -115,14 +105,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         int.tryParse(expirySoonDaysTextController.text.trim()) ?? 3;
     await p.setInt("expiry_soon_days", expirySoonDays);
 
-    if (expirySoonDaysTextController.text == "") {
+    if (expirySoonDaysTextController.text.isEmpty) {
       expirySoonDaysTextController.text = expirySoonDays.toString();
     }
-
-    setState(() => saved = trimmedUrl);
-
-    // trigger a sync now
-    await ref.read(syncProvider).syncOnce();
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -147,17 +132,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            TextField(
-              controller: serverUrlTextController,
-              decoration: const InputDecoration(
-                labelText: "Server Base URL",
-                helperText: "Example: http://192.168.1.10:5000",
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text("Current: $saved"),
-            const SizedBox(height: 24),
-            const Divider(),
             const SizedBox(height: 16),
             Text(
               "Calendar & reporting",
@@ -257,7 +231,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Extra?
             Text("Extra :)", style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
 
@@ -271,7 +244,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 TextInputFormatter.withFunction((oldValue, newValue) {
-                  // only allow numbers between 1 and 1000
                   if (newValue.text.isEmpty) return newValue;
                   final n = int.tryParse(newValue.text);
                   if (n == null || n < 1 || n > 1000) return oldValue;
@@ -281,7 +253,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             const SizedBox(height: 24),
 
-            ElevatedButton(onPressed: _save, child: const Text("Save & Sync")),
+            ElevatedButton(onPressed: _save, child: const Text("Save")),
           ],
         ),
       ),

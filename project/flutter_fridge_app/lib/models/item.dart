@@ -11,8 +11,6 @@ class Item {
   final double lowThreshold;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  // NEW: optional local path to the image file
   final String? imagePath;
 
   const Item({
@@ -63,44 +61,7 @@ class Item {
     );
   }
 
-  // ----- JSON (API) -----
-  static Item fromJson(Map<String, dynamic> j) => Item(
-    id: j["id"],
-    name: j["name"],
-    quantity: (j["quantity"] ?? 0).toDouble(),
-    unit: j["unit"] ?? "pcs",
-    expirationDate: j["expirationDate"] != null
-        ? DateTime.parse(j["expirationDate"])
-        : null,
-    pricePerUnit: j["pricePerUnit"] == null
-        ? null
-        : (j["pricePerUnit"] as num).toDouble(),
-    toBuy: j["toBuy"] ?? false,
-    notifyOnLow: j["notifyOnLow"] ?? true,
-    notifyOnExpire: j["notifyOnExpire"] ?? true,
-    lowThreshold: (j["lowThreshold"] ?? 1).toDouble(),
-    createdAt: DateTime.parse(j["createdAt"]),
-    updatedAt: DateTime.parse(j["updatedAt"]),
-    imagePath: j["imagePath"] as String?,
-  );
-
-  Map<String, dynamic> toJson() => {
-    "id": id,
-    "name": name,
-    "quantity": quantity,
-    "unit": unit,
-    "expirationDate": expirationDate?.toIso8601String(),
-    "pricePerUnit": pricePerUnit,
-    "toBuy": toBuy,
-    "notifyOnLow": notifyOnLow,
-    "notifyOnExpire": notifyOnExpire,
-    "lowThreshold": lowThreshold,
-    "createdAt": createdAt.toIso8601String(),
-    "updatedAt": updatedAt.toIso8601String(),
-    "imagePath": imagePath,
-  };
-
-  // ----- SQLite (DB) -----
+  // SQLite (DB)
   Map<String, Object?> toDb() => {
     "id": id,
     "name": name,
@@ -108,7 +69,7 @@ class Item {
     "unit": unit,
     "expirationDate": expirationDate?.toIso8601String(),
     "pricePerUnit": pricePerUnit,
-    "toBuy": toBuy ? 1 : 0, // ints for booleans
+    "toBuy": toBuy ? 1 : 0,
     "notifyOnLow": notifyOnLow ? 1 : 0,
     "notifyOnExpire": notifyOnExpire ? 1 : 0,
     "lowThreshold": lowThreshold,
@@ -134,6 +95,6 @@ class Item {
     lowThreshold: (r["lowThreshold"] as num).toDouble(),
     createdAt: DateTime.parse(r["createdAt"] as String),
     updatedAt: DateTime.parse(r["updatedAt"] as String),
-    imagePath: r["imagePath"] as String?, // NEW
+    imagePath: r["imagePath"] as String?,
   );
 }

@@ -1,17 +1,13 @@
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/services/reachability.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "pages/home.dart";
-import "pages/fridge.dart";
-import "pages/reports.dart";
-import "pages/settings.dart";
+
 import "package:flutter_fridge_app/data/repository.dart";
-import "package:flutter_fridge_app/sync/sync_manager.dart";
+import "package:flutter_fridge_app/pages/home.dart";
+import "package:flutter_fridge_app/pages/fridge.dart";
+import "package:flutter_fridge_app/pages/reports.dart";
+import "package:flutter_fridge_app/pages/settings.dart";
 
 final repoProvider = Provider<Repo>((_) => Repo());
-final syncProvider = Provider<SyncManager>(
-  (ref) => SyncManager(ref.read(repoProvider)),
-);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +16,7 @@ void main() {
 
 class App extends StatefulWidget {
   const App({super.key});
+
   @override
   State<App> createState() => _AppState();
 }
@@ -30,6 +27,7 @@ class _AppState extends State<App> {
     return MaterialApp(
       title: "FridgeNaut",
       theme: ThemeData(useMaterial3: true),
+      debugShowCheckedModeBanner: false,
       home: const Shell(),
     );
   }
@@ -37,39 +35,39 @@ class _AppState extends State<App> {
 
 class Shell extends ConsumerStatefulWidget {
   const Shell({super.key});
+
+  static ShellState? of(BuildContext context) =>
+      context.findAncestorStateOfType<ShellState>();
+
   @override
-  ConsumerState<Shell> createState() => _ShellState();
+  ConsumerState<Shell> createState() => ShellState();
 }
 
-class _ShellState extends ConsumerState<Shell> {
-  int idx = 0;
-  final pages = const [HomePage(), FridgePage(), ReportsPage(), SettingsPage()];
+class ShellState extends ConsumerState<Shell> {
+  int _idx = 0;
+  // "low", "expSoon", "expired", "outOfStock" or null
+  String? _fridgeInitialFilter;
 
-  late final SyncManager _sync;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _sync = ref.read(syncProvider);
-    final reach = ref.read(reachabilityProvider);
-
-    _sync.bindServerReachability(reach.stream);
-    _sync.startAutoSync();
-  }
-
-  @override
-  void dispose() {
-    _sync.stop();
-    super.dispose();
+  void navigateToFridge(String? filterKey) {
+    setState(() {
+      _idx = 1; // Fridge tab
+      _fridgeInitialFilter = filterKey;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      const HomePage(),
+      FridgePage(initialFilter: _fridgeInitialFilter),
+      const ReportsPage(),
+      const SettingsPage(),
+    ];
+
     return Scaffold(
-      body: pages[idx],
+      body: pages[_idx],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: idx,
+        selectedIndex: _idx,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: "Home"),
           NavigationDestination(
@@ -85,7 +83,15 @@ class _ShellState extends ConsumerState<Shell> {
             label: "Settings",
           ),
         ],
-        onDestinationSelected: (i) => setState(() => idx = i),
+        onDestinationSelected: (i) {
+          setState(() {
+            _idx = i;
+            if (i == 1) {
+              // User tapped Fridge tab directly -> clear any previous filter
+              _fridgeInitialFilter = null;
+            }
+          });
+        },
       ),
     );
   }

@@ -1,5 +1,7 @@
-import "package:sqflite/sqflite.dart";
 import "dart:async";
+import "package:flutter_fridge_app/models/Enums/inventory_event_type.dart";
+import "package:sqflite/sqflite.dart";
+
 import "db.dart";
 import "package:flutter_fridge_app/models/models.dart";
 
@@ -24,54 +26,6 @@ class Repo {
     } catch (_) {}
   }
 
-  Future<void> upsertItems(List<Item> items) async {
-    try {
-      final db = await _db;
-      final batch = db.batch();
-      for (final i in items) {
-        batch.insert(
-          "items",
-          i.toDb(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
-    } catch (_) {
-      /* offline or no DB on this platform */
-    }
-  }
-
-  Future<List<InventoryEvent>> unsyncedEvents() async {
-    try {
-      final db = await _db;
-      final rows = await db.query("events", where: "synced = 0");
-      return rows.map((r) => InventoryEvent.fromJson(r)).toList();
-    } catch (_) {
-      return <InventoryEvent>[];
-    }
-  }
-
-  Future<void> markEventsSynced(List<String> ids) async {
-    try {
-      final db = await _db;
-      final batch = db.batch();
-      for (final id in ids) {
-        batch.update("events", {"synced": 1}, where: "id = ?", whereArgs: [id]);
-      }
-      await batch.commit(noResult: true);
-    } catch (_) {}
-  }
-
-  Future<void> addEvent(InventoryEvent e) async {
-    try {
-      final db = await _db;
-      await db.insert("events", {
-        ...e.toJson(),
-        "synced": e.synced ? 1 : 0,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } catch (_) {}
-  }
-
   Future<List<Item>> allItems() async {
     try {
       final db = await _db;
@@ -82,30 +36,54 @@ class Repo {
     }
   }
 
-  Future<DateTime> lastSync() async {
+  Future<void> addEvent(InventoryEvent e) async {
     try {
       final db = await _db;
-      final rows = await db.query(
-        "meta",
-        where: "k = ?",
-        whereArgs: ["last_sync"],
-      );
-      if (rows.isEmpty) return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
-      return DateTime.parse(rows.first["v"] as String).toUtc();
-    } catch (_) {
-      return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
-    }
-  }
-
-  Future<void> setLastSync(DateTime ts) async {
-    try {
-      final db = await _db;
-      await db.insert("meta", {
-        "k": "last_sync",
-        "v": ts.toIso8601String(),
+      await db.insert("events", {
+        "id": e.id,
+        "itemId": e.itemId,
+        "deltaQuantity": e.deltaQuantity,
+        "unitPriceAtEvent": e.unitPriceAtEvent,
+        "type": inventoryEventTypeToString(e.type),
+        "occurredAt": e.occurredAt.toIso8601String(),
+        "createdAt": e.createdAt.toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (_) {}
   }
+
+  /// Apply an event and update the item's quantity atomically.
+  /// Used for +/- buttons where the event defines the delta.
+  Future<void> applyEventLocally(InventoryEvent e) async {
+    try {
+      final db = await _db;
+      final nowIso = e.createdAt.toIso8601String();
+
+      await db.transaction((txn) async {
+        await txn.insert("events", {
+          "id": e.id,
+          "itemId": e.itemId,
+          "deltaQuantity": e.deltaQuantity,
+          "unitPriceAtEvent": e.unitPriceAtEvent,
+          "type": inventoryEventTypeToString(e.type),
+          "occurredAt": e.occurredAt.toIso8601String(),
+          "createdAt": e.createdAt.toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+        // Persist new quantity, clamped at 0
+        await txn.rawUpdate(
+          """
+          UPDATE items
+          SET quantity = MAX(0, quantity + ?),
+              updatedAt = ?
+          WHERE id = ?
+          """,
+          [e.deltaQuantity, nowIso, e.itemId],
+        );
+      });
+    } catch (_) {}
+  }
+
+  // ---------- Alerts (HomePage) ----------
 
   Map<String, List<Item>> buildAlertsBuckets(
     List<Item> items, {
@@ -119,7 +97,9 @@ class Repo {
 
     final lowThresh = threshold;
     final low = items
-        .where((i) => i.quantity <= (lowThresh ?? i.lowThreshold))
+        .where(
+          (i) => i.quantity > 0 && i.quantity <= (lowThresh ?? i.lowThreshold),
+        )
         .toList();
 
     final expired = <Item>[];
@@ -139,7 +119,6 @@ class Repo {
         // today <= expiry date <= today + days => expiring soon
         expSoon.add(i);
       }
-      // else: after soonLimit => ignore for expSoon/expired
     }
 
     final outOfStock = items.where((i) => i.quantity <= 0).toList();
@@ -191,6 +170,7 @@ class Repo {
       if (range == "monthly") {
         from = DateTime.utc(now.year, now.month, 1);
       } else {
+        // treat everything else as "weekly" for now
         from = now.subtract(const Duration(days: 7));
       }
 
@@ -205,7 +185,7 @@ class Repo {
             THEN -deltaQuantity ELSE 0 END), 0) AS totalUsage
         FROM events
         WHERE occurredAt >= ?
-      """,
+        """,
         [from.toIso8601String()],
       );
 
@@ -216,29 +196,5 @@ class Repo {
     } catch (_) {
       return {"totalCost": 0, "totalUsage": 0};
     }
-  }
-
-  Future<void> applyEventLocally(InventoryEvent e) async {
-    try {
-      final db = await _db;
-      final nowIso = e.createdAt.toIso8601String();
-      await db.transaction((txn) async {
-        await txn.insert("events", {
-          ...e.toJson(),
-          "synced": e.synced ? 1 : 0,
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
-
-        // persist new quantity, clamp at 0
-        await txn.rawUpdate(
-          """
-        UPDATE items
-        SET quantity = MAX(0, quantity + ?),
-            updatedAt = ?
-        WHERE id = ?
-        """,
-          [e.deltaQuantity, nowIso, e.itemId],
-        );
-      });
-    } catch (_) {}
   }
 }

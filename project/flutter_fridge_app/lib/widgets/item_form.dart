@@ -78,7 +78,7 @@ class _ItemFormState extends State<ItemForm> {
       source: ImageSource.gallery,
       maxWidth: 1024,
       maxHeight: 1024,
-      imageQuality: 85,
+      imageQuality: 100,
     );
     if (picked != null) {
       setState(() {
