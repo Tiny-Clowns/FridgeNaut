@@ -1,13 +1,12 @@
-// test/pages/fridge_test.dart
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/models/inventory_event.dart";
 import "package:flutter_fridge_app/data/repository.dart";
-import "package:flutter_fridge_app/sync/sync_manager.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 
 // ----------------- Fakes -----------------
@@ -54,50 +53,29 @@ class FakeRepo extends Repo {
   }
 }
 
-class FakeSyncManager extends SyncManager {
-  FakeSyncManager(super.repo);
-
-  @override
-  Future<void> syncOnce() async {
-    // no-op in tests
-  }
-
-  @override
-  void startAutoSync({Duration interval = const Duration(minutes: 5)}) {
-    // no-op
-  }
-
-  @override
-  void stop() {
-    // no-op
-  }
-
-  @override
-  void bindServerReachability(Stream<bool> s) {
-    // no-op
-  }
-}
-
 // ----------------- Helpers -----------------
 
 Future<void> _pumpFridgePage(
   WidgetTester tester, {
   required List<Item> items,
 }) async {
+  // Make SharedPreferences work in tests
+  SharedPreferences.setMockInitialValues({});
+
   final fakeRepo = FakeRepo(initialItems: items);
-  final fakeSync = FakeSyncManager(fakeRepo);
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        repoProvider.overrideWithValue(fakeRepo),
-        syncProvider.overrideWithValue(fakeSync),
-      ],
+      overrides: [repoProvider.overrideWithValue(fakeRepo)],
       child: const MaterialApp(home: FridgePage()),
     ),
   );
 
-  await tester.pumpAndSettle();
+  // First frame
+  await tester.pump();
+
+  // Give async init (prefs + repo load) a bit of time
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 Item _buildItem({
@@ -279,7 +257,6 @@ void main() {
 
     final rootSpan = subtitleRichText.text as TextSpan;
 
-    // Just assert the span that contains "exp " is red
     final expirySpan = _findSpanWithText(rootSpan, "exp ");
     expect(expirySpan, isNotNull);
     expect(expirySpan!.style?.color, Colors.red);

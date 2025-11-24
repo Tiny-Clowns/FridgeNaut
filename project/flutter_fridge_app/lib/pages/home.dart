@@ -2,8 +2,8 @@ import "package:flutter/material.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
-import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
+import "package:flutter_fridge_app/common/widgets/stat_card.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 class HomePage extends ConsumerStatefulWidget {
@@ -27,10 +27,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     _load();
-    // opportunistic background sync
-    Future.microtask(
-      () => ref.read(syncProvider).syncOnce().then((_) => _load()),
-    );
   }
 
   Future<void> _load() async {
@@ -62,6 +58,18 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
+  void _openFridgeWithFilter(BuildContext context, String filterKey) {
+    final shell = Shell.of(context);
+    if (shell != null) {
+      shell.navigateToFridge(filterKey);
+    } else {
+      // fallback for tests / if Shell not in tree
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => FridgePage(initialFilter: filterKey)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -74,80 +82,41 @@ class _HomePageState extends ConsumerState<HomePage> {
     final buy = _alerts["toBuy"]!.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Home"),
-        bottom: const ServerReachabilityBanner(),
-      ),
+      appBar: AppBar(title: const Text("Home")),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await ref.read(syncProvider).syncOnce();
-          await _load();
-        },
+        onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
-            _stat(
-              "Low stock",
-              low,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FridgePage(initialFilter: "low"),
-                  ),
-                );
-              },
+            StatCard(
+              title: "Low stock",
+              count: low,
+              onTap: () => _openFridgeWithFilter(context, "low"),
             ),
-            _stat(
-              "Expiring soon",
-              expSoon,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FridgePage(initialFilter: "expSoon"),
-                  ),
-                );
-              },
+            StatCard(
+              title: "Expiring soon",
+              count: expSoon,
+              onTap: () => _openFridgeWithFilter(context, "expSoon"),
             ),
-            _stat(
-              "Expired",
-              expired,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FridgePage(initialFilter: "expired"),
-                  ),
-                );
-              },
+            StatCard(
+              title: "Expired",
+              count: expired,
+              onTap: () => _openFridgeWithFilter(context, "expired"),
             ),
-            _stat(
-              "Out of stock",
-              oos,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const FridgePage(initialFilter: "outOfStock"),
-                  ),
-                );
-              },
+            StatCard(
+              title: "Out of stock",
+              count: oos,
+              onTap: () => _openFridgeWithFilter(context, "outOfStock"),
             ),
-            // Planned to buy: no navigation
-            _stat("Planned to buy", buy),
+            StatCard(
+              title: "Planned to buy",
+              count: buy,
+              // no navigation
+            ),
           ],
         ),
       ),
     );
   }
-
-  Widget _stat(String label, int count, {VoidCallback? onTap}) => Card(
-    child: ListTile(
-      title: Text(label),
-      trailing: Text(
-        "$count",
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      onTap: onTap,
-    ),
-  );
 }

@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
-import "package:flutter_fridge_app/widgets/server_reachability_banner.dart";
+import "package:flutter_fridge_app/common/widgets/stat_card.dart";
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -20,9 +20,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   void initState() {
     super.initState();
     _load();
-    Future.microtask(
-      () => ref.read(syncProvider).syncOnce().then((_) => _load()),
-    );
   }
 
   Future<void> _load() async {
@@ -52,15 +49,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     if (_err != null) return Center(child: Text("Error: $_err"));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Reports"),
-        bottom: const ServerReachabilityBanner(),
-      ),
+      appBar: AppBar(title: const Text("Reports")),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await ref.read(syncProvider).syncOnce();
-          await _load();
-        },
+        onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -76,8 +67,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   Widget _card(String title, Map<String, num>? data) {
     final cost = (data?["totalCost"] ?? 0).toStringAsFixed(2);
-    return Card(
-      child: ListTile(title: Text(title), subtitle: Text("Cost: $cost")),
-    );
+    return StatCard(title: title, subtitle: "Cost: $cost");
   }
 }

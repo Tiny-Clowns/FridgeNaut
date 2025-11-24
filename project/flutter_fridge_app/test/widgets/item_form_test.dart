@@ -6,7 +6,6 @@ Future<void> _pumpItemForm(WidgetTester tester) async {
   await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ItemForm())));
 }
 
-/// Helper: fill fields (if non-null) and run validate().
 Future<bool> _fillAndValidate(
   WidgetTester tester, {
   String? name = "Test item",

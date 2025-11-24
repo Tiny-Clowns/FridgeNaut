@@ -1,4 +1,3 @@
-// test/pages/home_test.dart
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -7,7 +6,6 @@ import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/data/repository.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/home.dart";
-import "package:flutter_fridge_app/sync/sync_manager.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 class FakeRepo extends Repo {
@@ -43,44 +41,16 @@ class FakeRepo extends Repo {
   }
 }
 
-class FakeSyncManager extends SyncManager {
-  FakeSyncManager(super.repo);
-
-  @override
-  Future<void> syncOnce() async {
-    // no-op in tests
-  }
-
-  @override
-  void startAutoSync({Duration interval = const Duration(minutes: 5)}) {
-    // no-op
-  }
-
-  @override
-  void stop() {
-    // no-op
-  }
-
-  @override
-  void bindServerReachability(Stream<bool> s) {
-    // no-op
-  }
-}
-
 void main() {
   testWidgets("Home page displays alert counts from repo", (
     WidgetTester tester,
   ) async {
     final fakeRepo = FakeRepo();
-    final fakeSync = FakeSyncManager(fakeRepo);
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          repoProvider.overrideWithValue(fakeRepo),
-          syncProvider.overrideWithValue(fakeSync),
-        ],
+        overrides: [repoProvider.overrideWithValue(fakeRepo)],
         child: const MaterialApp(home: HomePage()),
       ),
     );
