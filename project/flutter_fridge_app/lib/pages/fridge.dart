@@ -10,6 +10,9 @@ import "package:flutter_fridge_app/widgets/item_form.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_list.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
+  /// One of: "low", "expSoon", "expired", "outOfStock", or null.
+  ///
+  /// When null, the fridge opens on the "In stock" filter.
   final String? initialFilter;
 
   const FridgePage({super.key, this.initialFilter});
@@ -83,7 +86,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
 
     await ref.read(repoProvider).upsertItem(updated);
 
-    final delta = (updated.quantity - old.quantity);
+    final delta = updated.quantity - old.quantity;
     if (delta != 0) {
       final e = InventoryEvent(
         id: _genId(),

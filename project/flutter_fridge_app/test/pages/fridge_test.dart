@@ -58,6 +58,7 @@ class FakeRepo extends Repo {
 Future<void> _pumpFridgePage(
   WidgetTester tester, {
   required List<Item> items,
+  String? initialFilter,
 }) async {
   // Make SharedPreferences work in tests
   SharedPreferences.setMockInitialValues({});
@@ -67,7 +68,7 @@ Future<void> _pumpFridgePage(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [repoProvider.overrideWithValue(fakeRepo)],
-      child: const MaterialApp(home: FridgePage()),
+      child: MaterialApp(home: FridgePage(initialFilter: initialFilter)),
     ),
   );
 
@@ -198,7 +199,8 @@ void main() {
       lowThreshold: 1,
     );
 
-    await _pumpFridgePage(tester, items: [item]);
+    // IMPORTANT: open Fridge with the "outOfStock" filter so quantity-0 items are visible
+    await _pumpFridgePage(tester, items: [item], initialFilter: "outOfStock");
 
     final deleteButtonFinder = find.widgetWithIcon(IconButton, Icons.delete);
     final minusButtonFinder = find.widgetWithIcon(IconButton, Icons.remove);
