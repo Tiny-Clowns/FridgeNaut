@@ -12,7 +12,9 @@ class FridgeItemList extends StatelessWidget {
   final Future<void> Function(Item item) onIncrement;
   final Future<void> Function(Item item) onDecrementOrDelete;
 
-  /// "low", "expSoon", "expired", "outOfStock" or null
+  /// "low", "expSoon", "expired", "outOfStock" or null.
+  ///
+  /// When null, the fridge opens on the "In stock" filter (first chip).
   final String? initialFilterKey;
 
   const FridgeItemList({
@@ -28,6 +30,7 @@ class FridgeItemList extends StatelessWidget {
 
   bool _isExpired(Item it) {
     if (it.expirationDate == null) return false;
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -40,6 +43,7 @@ class FridgeItemList extends StatelessWidget {
 
   bool _isExpiringSoon(Item it) {
     if (it.expirationDate == null) return false;
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -52,17 +56,24 @@ class FridgeItemList extends StatelessWidget {
   }
 
   int _initialFilterIndex() {
+    // Chip order (indexes) for fridge:
+    // 0: In stock
+    // 1: Low stock
+    // 2: Expiring soon
+    // 3: Expired
+    // 4: Out of stock
+    // 5: All (handled by SearchFilterList, All last)
     switch (initialFilterKey) {
       case "low":
-        return 1; // Low stock
+        return 1;
       case "expSoon":
-        return 2; // Expiring soon
+        return 2;
       case "expired":
-        return 3; // Expired
+        return 3;
       case "outOfStock":
-        return 4; // Out of stock
+        return 4;
       default:
-        return 0; // All
+        return 0; // In stock (default)
     }
   }
 
@@ -157,26 +168,32 @@ class FridgeItemList extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filters = <FilterDefinition<Item>>[
+  List<FilterDefinition<Item>> _buildFilters() {
+    return <FilterDefinition<Item>>[
+      FilterDefinition<Item>(
+        label: "In stock",
+        predicate: (it) => it.quantity > 0,
+      ),
       FilterDefinition<Item>(
         label: "Low stock",
-        predicate: (it) => it.quantity <= it.lowThreshold && it.quantity > 0,
+        predicate: (it) => it.quantity > 0 && it.quantity <= it.lowThreshold,
       ),
       FilterDefinition<Item>(
         label: "Expiring soon",
-        predicate: (it) => _isExpiringSoon(it),
+        predicate: _isExpiringSoon,
       ),
-      FilterDefinition<Item>(
-        label: "Expired",
-        predicate: (it) => _isExpired(it),
-      ),
+      FilterDefinition<Item>(label: "Expired", predicate: _isExpired),
       FilterDefinition<Item>(
         label: "Out of stock",
         predicate: (it) => it.quantity <= 0,
       ),
+      // No "All" here – All is handled by the base widget via showAllFilter.
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filters = _buildFilters();
 
     return SearchFilterList<Item>(
       items: items,
@@ -185,6 +202,11 @@ class FridgeItemList extends StatelessWidget {
       initialFilterIndex: _initialFilterIndex(),
       onRefresh: onRefresh,
       itemBuilder: _buildTile,
+      // Fridge-specific: we want "In stock" first, and "All" as the last chip.
+      showAllFilter: true,
+      allLabel: "All",
+      allFilterFirst: false,
+      // allPredicate: null -> All items, regardless of filter.
     );
   }
 }
