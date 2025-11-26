@@ -1,8 +1,9 @@
 import "dart:io";
 
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/common/widgets/search_filter_list.dart";
+import "package:flutter_fridge_app/domain/item_status.dart";
+import "package:flutter_fridge_app/models/item.dart";
 
 class FridgeItemList extends StatelessWidget {
   final List<Item> items;
@@ -28,33 +29,6 @@ class FridgeItemList extends StatelessWidget {
     this.initialFilterKey,
   });
 
-  bool _isExpired(Item it) {
-    if (it.expirationDate == null) return false;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final localExp = it.expirationDate!.toLocal();
-    final expDateOnly = DateTime(localExp.year, localExp.month, localExp.day);
-
-    final daysDiff = expDateOnly.difference(today).inDays;
-    return daysDiff < 0;
-  }
-
-  bool _isExpiringSoon(Item it) {
-    if (it.expirationDate == null) return false;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final localExp = it.expirationDate!.toLocal();
-    final expDateOnly = DateTime(localExp.year, localExp.month, localExp.day);
-
-    final daysDiff = expDateOnly.difference(today).inDays;
-    final isExpired = daysDiff < 0;
-    return !isExpired && daysDiff <= expirySoonDays;
-  }
-
   int _initialFilterIndex() {
     // Chip order (indexes) for fridge:
     // 0: In stock
@@ -62,7 +36,7 @@ class FridgeItemList extends StatelessWidget {
     // 2: Expiring soon
     // 3: Expired
     // 4: Out of stock
-    // 5: All (handled by SearchFilterList, All last)
+    // 5: All (added by SearchFilterList, All last)
     switch (initialFilterKey) {
       case "low":
         return 1;
@@ -91,27 +65,23 @@ class FridgeItemList extends StatelessWidget {
     return CircleAvatar(backgroundImage: FileImage(file));
   }
 
+  String? _buildExpiryText(Item it) {
+    if (it.expirationDate == null) return null;
+    final localExp = it.expirationDate!.toLocal();
+    final expDateOnly = DateTime(localExp.year, localExp.month, localExp.day);
+    // Keep the "exp " prefix so tests can match "exp "
+    return "exp ${expDateOnly.toIso8601String().substring(0, 10)}";
+  }
+
   Widget _buildTile(BuildContext context, Item it) {
-    final bool isLowOrEqualThreshold = it.quantity <= it.lowThreshold;
-    final bool isZeroQuantity = it.quantity <= 0;
+    final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
 
-    bool isExpired = false;
-    bool isExpSoon = false;
-    String? expiryText;
+    final bool isLowOrEqualThreshold = status.isLow;
+    final bool isZeroQuantity = status.isOutOfStock;
+    final bool isExpired = status.isExpired;
+    final bool isExpSoon = status.isExpiringSoon;
 
-    if (it.expirationDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      final localExp = it.expirationDate!.toLocal();
-      final expDateOnly = DateTime(localExp.year, localExp.month, localExp.day);
-
-      final daysDiff = expDateOnly.difference(today).inDays;
-      isExpired = daysDiff < 0;
-      isExpSoon = !isExpired && daysDiff <= expirySoonDays;
-
-      expiryText = "exp ${expDateOnly.toIso8601String().substring(0, 10)}";
-    }
+    final expiryText = _buildExpiryText(it);
 
     return ListTile(
       leading: _buildItemImage(it),
@@ -172,22 +142,40 @@ class FridgeItemList extends StatelessWidget {
     return <FilterDefinition<Item>>[
       FilterDefinition<Item>(
         label: "In stock",
-        predicate: (it) => it.quantity > 0,
+        predicate: (it) {
+          final status = calculateItemStatus(
+            it,
+            expirySoonDays: expirySoonDays,
+          );
+          // In stock = anything that is not out of stock
+          return !status.isOutOfStock;
+        },
       ),
       FilterDefinition<Item>(
         label: "Low stock",
-        predicate: (it) => it.quantity > 0 && it.quantity <= it.lowThreshold,
+        predicate: (it) =>
+            calculateItemStatus(it, expirySoonDays: expirySoonDays).stock ==
+            StockStatus.low,
       ),
       FilterDefinition<Item>(
         label: "Expiring soon",
-        predicate: _isExpiringSoon,
+        predicate: (it) =>
+            calculateItemStatus(it, expirySoonDays: expirySoonDays).expiry ==
+            ExpiryStatus.expiringSoon,
       ),
-      FilterDefinition<Item>(label: "Expired", predicate: _isExpired),
+      FilterDefinition<Item>(
+        label: "Expired",
+        predicate: (it) =>
+            calculateItemStatus(it, expirySoonDays: expirySoonDays).expiry ==
+            ExpiryStatus.expired,
+      ),
       FilterDefinition<Item>(
         label: "Out of stock",
-        predicate: (it) => it.quantity <= 0,
+        predicate: (it) =>
+            calculateItemStatus(it, expirySoonDays: expirySoonDays).stock ==
+            StockStatus.outOfStock,
       ),
-      // No "All" here – All is handled by the base widget via showAllFilter.
+      // No "All" here – All is handled by SearchFilterList via showAllFilter.
     ];
   }
 

@@ -1,19 +1,32 @@
 // lib/pages/settings.dart
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
-import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:shared_preferences/shared_preferences.dart";
+
+import "package:flutter_fridge_app/domain/calendar/user_calendar_settings.dart";
+import "package:flutter_fridge_app/services/user_calendar_settings_service.dart";
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
+
   @override
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final expirySoonDaysTextController = TextEditingController();
+  // Controllers
+  final TextEditingController _expirySoonDaysController =
+      TextEditingController();
 
+  // Services
+  final UserCalendarSettingsService _calendarSettingsService =
+      const UserCalendarSettingsService();
+
+  // State
   bool _loading = true;
+  UserCalendarSettings _calendarSettings =
+      const UserCalendarSettings.defaultValues();
 
   static const _weekdayNames = <String>[
     "Sunday",
@@ -40,11 +53,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     "December",
   ];
 
-  int _weekStartDayIndex = 0; // 0 = Sunday (default)
-  int _monthStartDay = 1; // 1st of the month (default)
-  int _yearStartMonth = 1; // January (1-based)
-  int _yearStartDay = 1; // 1st
-
   @override
   void initState() {
     super.initState();
@@ -53,7 +61,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   void dispose() {
-    expirySoonDaysTextController.dispose();
+    _expirySoonDaysController.dispose();
     super.dispose();
   }
 
@@ -69,44 +77,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _loading = true;
     });
 
-    final p = await SharedPreferences.getInstance();
-
-    final weekStart = p.getInt("week_start_day") ?? 0; // Sunday
-    final monthStart = p.getInt("month_start_day") ?? 1; // 1st
-    final yearStartMonth = p.getInt("year_start_month") ?? 1; // January
-    final yearStartDay = p.getInt("year_start_day") ?? 1; // 1st
-    final expirySoonDays = p.getInt("expiry_soon_days") ?? 3;
-
-    final clampedWeekStart = weekStart.clamp(0, 6);
-    final clampedMonthStart = monthStart.clamp(1, 31);
-    final clampedYearStartMonth = yearStartMonth.clamp(1, 12);
-    final maxYearStartDay = _daysInMonth(clampedYearStartMonth);
-    final clampedYearStartDay = yearStartDay.clamp(1, maxYearStartDay);
+    final prefs = await SharedPreferences.getInstance();
+    final calendar = await _calendarSettingsService.load();
+    final expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
 
     setState(() {
-      _weekStartDayIndex = clampedWeekStart;
-      _monthStartDay = clampedMonthStart;
-      _yearStartMonth = clampedYearStartMonth;
-      _yearStartDay = clampedYearStartDay;
-      expirySoonDaysTextController.text = expirySoonDays.toString();
+      _calendarSettings = calendar;
+      _expirySoonDaysController.text = expirySoonDays.toString();
       _loading = false;
     });
   }
 
   Future<void> _save() async {
-    final p = await SharedPreferences.getInstance();
+    final rawText = _expirySoonDaysController.text.trim();
+    final parsed = int.tryParse(rawText);
+    final expirySoonDays = (parsed == null || parsed < 1 || parsed > 1000)
+        ? 3
+        : parsed;
 
-    await p.setInt("week_start_day", _weekStartDayIndex);
-    await p.setInt("month_start_day", _monthStartDay);
-    await p.setInt("year_start_month", _yearStartMonth);
-    await p.setInt("year_start_day", _yearStartDay);
+    final prefs = await SharedPreferences.getInstance();
 
-    final expirySoonDays =
-        int.tryParse(expirySoonDaysTextController.text.trim()) ?? 3;
-    await p.setInt("expiry_soon_days", expirySoonDays);
+    // Save calendar settings via service
+    await _calendarSettingsService.save(_calendarSettings);
 
-    if (expirySoonDaysTextController.text.isEmpty) {
-      expirySoonDaysTextController.text = expirySoonDays.toString();
+    // Save expirySoonDays directly (simple scalar setting)
+    await prefs.setInt("expiry_soon_days", expirySoonDays);
+
+    if (_expirySoonDaysController.text.isEmpty) {
+      _expirySoonDaysController.text = expirySoonDays.toString();
     }
 
     if (!mounted) return;
@@ -114,6 +112,161 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context,
     ).showSnackBar(const SnackBar(content: Text("Saved")));
   }
+
+  // ---------------------------------------------------------------------------
+  // UI building helpers
+  // ---------------------------------------------------------------------------
+
+  Widget _buildCalendarSection(BuildContext context) {
+    final maxYearStartDay = _daysInMonth(_calendarSettings.yearStartMonth);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Calendar & reporting",
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 16),
+
+        // Week start day
+        DropdownButtonFormField<int>(
+          initialValue: _calendarSettings.weekStartDayIndex,
+          decoration: const InputDecoration(
+            labelText: "Week start day",
+            helperText: "Which day counts as the first day of the week.",
+          ),
+          items: List.generate(
+            _weekdayNames.length,
+            (i) => DropdownMenuItem(value: i, child: Text(_weekdayNames[i])),
+          ),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _calendarSettings = _calendarSettings.copyWith(
+                weekStartDayIndex: value,
+              );
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Month start date
+        DropdownButtonFormField<int>(
+          initialValue: _calendarSettings.monthStartDay,
+          decoration: const InputDecoration(
+            labelText: "Month start date",
+            helperText: "Which calendar day counts as the start of a month.",
+          ),
+          items: List.generate(
+            31,
+            (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
+          ),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _calendarSettings = _calendarSettings.copyWith(
+                monthStartDay: value,
+              );
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Year start: month + day
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<int>(
+                initialValue: _calendarSettings.yearStartMonth,
+                decoration: const InputDecoration(
+                  labelText: "Year start month",
+                ),
+                items: List.generate(
+                  _monthNames.length,
+                  (i) => DropdownMenuItem(
+                    value: i + 1,
+                    child: Text(_monthNames[i]),
+                  ),
+                ),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    final newMonth = value;
+                    final maxDay = _daysInMonth(newMonth);
+                    final newDay = _calendarSettings.yearStartDay > maxDay
+                        ? maxDay
+                        : _calendarSettings.yearStartDay;
+
+                    _calendarSettings = _calendarSettings.copyWith(
+                      yearStartMonth: newMonth,
+                      yearStartDay: newDay,
+                    );
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: DropdownButtonFormField<int>(
+                initialValue: _calendarSettings.yearStartDay.clamp(
+                  1,
+                  maxYearStartDay,
+                ),
+                decoration: const InputDecoration(labelText: "Day"),
+                items: List.generate(
+                  maxYearStartDay,
+                  (i) =>
+                      DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
+                ),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _calendarSettings = _calendarSettings.copyWith(
+                      yearStartDay: value,
+                    );
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpirySoonSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Extra :)", style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _expirySoonDaysController,
+          decoration: const InputDecoration(
+            labelText: "Expiry Soon Days",
+            helperText: "Between 1 and 1000 please. Default is 3",
+          ),
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            TextInputFormatter.withFunction((oldValue, newValue) {
+              if (newValue.text.isEmpty) return newValue;
+              final n = int.tryParse(newValue.text);
+              if (n == null || n < 1 || n > 1000) return oldValue;
+              return newValue;
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -124,8 +277,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
     }
 
-    final maxYearStartDay = _daysInMonth(_yearStartMonth);
-
     return Scaffold(
       appBar: AppBar(title: const Text("Settings")),
       body: Padding(
@@ -133,126 +284,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: ListView(
           children: [
             const SizedBox(height: 16),
-            Text(
-              "Calendar & reporting",
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-
-            // Week start day
-            DropdownButtonFormField<int>(
-              initialValue: _weekStartDayIndex,
-              decoration: const InputDecoration(
-                labelText: "Week start day",
-                helperText: "Which day counts as the first day of the week.",
-              ),
-              items: List.generate(
-                _weekdayNames.length,
-                (i) =>
-                    DropdownMenuItem(value: i, child: Text(_weekdayNames[i])),
-              ),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _weekStartDayIndex = value);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Month start date
-            DropdownButtonFormField<int>(
-              initialValue: _monthStartDay,
-              decoration: const InputDecoration(
-                labelText: "Month start date",
-                helperText:
-                    "Which calendar day counts as the start of a month.",
-              ),
-              items: List.generate(
-                31,
-                (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
-              ),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _monthStartDay = value);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Year start: month + day
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _yearStartMonth,
-                    decoration: const InputDecoration(
-                      labelText: "Year start month",
-                    ),
-                    items: List.generate(
-                      _monthNames.length,
-                      (i) => DropdownMenuItem(
-                        value: i + 1,
-                        child: Text(_monthNames[i]),
-                      ),
-                    ),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _yearStartMonth = value;
-                        final maxDay = _daysInMonth(_yearStartMonth);
-                        if (_yearStartDay > maxDay) {
-                          _yearStartDay = maxDay;
-                        }
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _yearStartDay.clamp(1, maxYearStartDay),
-                    decoration: const InputDecoration(labelText: "Day"),
-                    items: List.generate(
-                      maxYearStartDay,
-                      (i) => DropdownMenuItem(
-                        value: i + 1,
-                        child: Text("${i + 1}"),
-                      ),
-                    ),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _yearStartDay = value);
-                    },
-                  ),
-                ),
-              ],
-            ),
+            _buildCalendarSection(context),
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 16),
-
-            Text("Extra :)", style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: expirySoonDaysTextController,
-              decoration: const InputDecoration(
-                labelText: "Expiry Soon Days",
-                helperText: "Between 1 and 1000 please. Default is 3",
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                TextInputFormatter.withFunction((oldValue, newValue) {
-                  if (newValue.text.isEmpty) return newValue;
-                  final n = int.tryParse(newValue.text);
-                  if (n == null || n < 1 || n > 1000) return oldValue;
-                  return newValue;
-                }),
-              ],
-            ),
+            _buildExpirySoonSection(context),
             const SizedBox(height: 24),
-
             ElevatedButton(onPressed: _save, child: const Text("Save")),
           ],
         ),

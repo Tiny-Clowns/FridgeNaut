@@ -1,11 +1,11 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/domain/inventory/inventory_event_type.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/models/inventory_event.dart";
-import "package:flutter_fridge_app/models/Enums/inventory_event_type.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_list.dart";
 
