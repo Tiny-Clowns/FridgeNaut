@@ -1,4 +1,6 @@
-import 'package:flutter_fridge_app/models/Enums/inventory_event_type.dart';
+// lib/models/inventory_event.dart
+
+import "package:flutter_fridge_app/domain/inventory/inventory_event_type.dart";
 
 class InventoryEvent {
   final String id;

@@ -1,5 +1,5 @@
 import "dart:async";
-import "package:flutter_fridge_app/models/Enums/inventory_event_type.dart";
+import "package:flutter_fridge_app/domain/inventory/inventory_event_rules.dart";
 import "package:sqflite/sqflite.dart";
 
 import "db.dart";

@@ -1,19 +1,13 @@
-// lib/services/user_calendar_settings.dart
-import "package:shared_preferences/shared_preferences.dart";
+// lib/domain/calendar/user_calendar_settings.dart
 
-/// Helper for user-configurable calendar boundaries (week, month, year).
+/// User-configurable calendar boundaries (week, month, year).
 ///
-/// Storage format:
+/// Meaning:
 /// - weekStartDayIndex: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 /// - monthStartDay: 1–31
 /// - yearStartMonth: 1–12 (January = 1)
 /// - yearStartDay: 1–31 (clamped to actual month length when used)
 class UserCalendarSettings {
-  static const String keyWeekStartDay = "week_start_day";
-  static const String keyMonthStartDay = "month_start_day";
-  static const String keyYearStartMonth = "year_start_month";
-  static const String keyYearStartDay = "year_start_day";
-
   static const int defaultWeekStartDayIndex = 0; // Sunday
   static const int defaultMonthStartDay = 1; // 1st
   static const int defaultYearStartMonth = 1; // January
@@ -31,6 +25,38 @@ class UserCalendarSettings {
     required this.yearStartDay,
   });
 
+  const UserCalendarSettings.defaultValues()
+    : weekStartDayIndex = defaultWeekStartDayIndex,
+      monthStartDay = defaultMonthStartDay,
+      yearStartMonth = defaultYearStartMonth,
+      yearStartDay = defaultYearStartDay;
+
+  /// Construct from raw values (e.g. from storage), applying clamping
+  /// and defaults rules in one place.
+  factory UserCalendarSettings.fromRaw({
+    required int weekStartDayIndex,
+    required int monthStartDay,
+    required int yearStartMonth,
+    required int yearStartDay,
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+
+    final clampedWeekStart = weekStartDayIndex.clamp(0, 6);
+    final clampedMonthStart = monthStartDay.clamp(1, 31);
+    final clampedYearStartMonth = yearStartMonth.clamp(1, 12);
+
+    final maxYearDay = _daysInMonth(current.year, clampedYearStartMonth);
+    final clampedYearStartDay = yearStartDay.clamp(1, maxYearDay);
+
+    return UserCalendarSettings(
+      weekStartDayIndex: clampedWeekStart,
+      monthStartDay: clampedMonthStart,
+      yearStartMonth: clampedYearStartMonth,
+      yearStartDay: clampedYearStartDay,
+    );
+  }
+
   UserCalendarSettings copyWith({
     int? weekStartDayIndex,
     int? monthStartDay,
@@ -43,41 +69,6 @@ class UserCalendarSettings {
       yearStartMonth: yearStartMonth ?? this.yearStartMonth,
       yearStartDay: yearStartDay ?? this.yearStartDay,
     );
-  }
-
-  /// Load settings from SharedPreferences, applying sane defaults and clamping.
-  static Future<UserCalendarSettings> load() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final weekStart = prefs.getInt(keyWeekStartDay) ?? defaultWeekStartDayIndex;
-    final monthStart = prefs.getInt(keyMonthStartDay) ?? defaultMonthStartDay;
-    final yearStartMonth =
-        prefs.getInt(keyYearStartMonth) ?? defaultYearStartMonth;
-    final yearStartDay = prefs.getInt(keyYearStartDay) ?? defaultYearStartDay;
-
-    final clampedWeekStart = weekStart.clamp(0, 6);
-    final clampedMonthStart = monthStart.clamp(1, 31);
-    final clampedYearStartMonth = yearStartMonth.clamp(1, 12);
-
-    final currentYear = DateTime.now().year;
-    final maxYearDay = _daysInMonth(currentYear, clampedYearStartMonth);
-    final clampedYearStartDay = yearStartDay.clamp(1, maxYearDay);
-
-    return UserCalendarSettings(
-      weekStartDayIndex: clampedWeekStart,
-      monthStartDay: clampedMonthStart,
-      yearStartMonth: clampedYearStartMonth,
-      yearStartDay: clampedYearStartDay,
-    );
-  }
-
-  /// Persist settings to SharedPreferences.
-  static Future<void> save(UserCalendarSettings settings) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(keyWeekStartDay, settings.weekStartDayIndex);
-    await prefs.setInt(keyMonthStartDay, settings.monthStartDay);
-    await prefs.setInt(keyYearStartMonth, settings.yearStartMonth);
-    await prefs.setInt(keyYearStartDay, settings.yearStartDay);
   }
 
   /// Start of the user-defined week containing [date] (at midnight).
@@ -123,23 +114,21 @@ class UserCalendarSettings {
   DateTime yearStartFor(DateTime date) {
     final d = DateTime(date.year, date.month, date.day);
 
-    final maxDayThisYear = _daysInMonth(d.year, yearStartMonth.clamp(1, 12));
+    final clampedYearMonth = yearStartMonth.clamp(1, 12);
+    final maxDayThisYear = _daysInMonth(d.year, clampedYearMonth);
     final effectiveDay = yearStartDay > maxDayThisYear
         ? maxDayThisYear
         : yearStartDay;
 
-    var candidate = DateTime(d.year, yearStartMonth, effectiveDay);
+    var candidate = DateTime(d.year, clampedYearMonth, effectiveDay);
 
     if (d.isBefore(candidate)) {
       final prevYear = d.year - 1;
-      final maxDayPrevYear = _daysInMonth(
-        prevYear,
-        yearStartMonth.clamp(1, 12),
-      );
+      final maxDayPrevYear = _daysInMonth(prevYear, clampedYearMonth);
       final prevEffectiveDay = yearStartDay > maxDayPrevYear
           ? maxDayPrevYear
           : yearStartDay;
-      candidate = DateTime(prevYear, yearStartMonth, prevEffectiveDay);
+      candidate = DateTime(prevYear, clampedYearMonth, prevEffectiveDay);
     }
 
     return candidate;
