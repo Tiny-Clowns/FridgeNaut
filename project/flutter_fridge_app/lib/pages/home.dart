@@ -75,11 +75,20 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_err != null) return Center(child: Text("Error: $_err"));
 
-    final low = _alerts["low"]!.length;
-    final expSoon = _alerts["expSoon"]!.length;
-    final expired = (_alerts["expired"] ?? const <dynamic>[]).length;
-    final oos = _alerts["outOfStock"]!.length;
-    final buy = _alerts["toBuy"]!.length;
+    final lowItems = _alerts["low"] ?? <Item>[];
+    final expSoonItems = _alerts["expSoon"] ?? <Item>[];
+    final expiredItems = _alerts["expired"] ?? <Item>[];
+    final outOfStockItems = _alerts["outOfStock"] ?? <Item>[];
+    final toBuyItems = _alerts["toBuy"] ?? <Item>[];
+
+    // Only count items that are actually in stock (qty > 0)
+    final low = lowItems.where((it) => it.quantity > 0).length;
+    final expSoon = expSoonItems.where((it) => it.quantity > 0).length;
+    final expired = expiredItems.where((it) => it.quantity > 0).length;
+
+    // Out-of-stock count is its own thing
+    final oos = outOfStockItems.length;
+    final buy = toBuyItems.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text("Home")),

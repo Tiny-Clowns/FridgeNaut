@@ -147,35 +147,54 @@ class FridgeItemList extends StatelessWidget {
             it,
             expirySoonDays: expirySoonDays,
           );
-          // In stock = anything that is not out of stock
+          // Anything that is not out of stock
           return !status.isOutOfStock;
         },
       ),
       FilterDefinition<Item>(
         label: "Low stock",
-        predicate: (it) =>
-            calculateItemStatus(it, expirySoonDays: expirySoonDays).stock ==
-            StockStatus.low,
+        predicate: (it) {
+          final status = calculateItemStatus(
+            it,
+            expirySoonDays: expirySoonDays,
+          );
+          return status.stock == StockStatus.low;
+        },
       ),
       FilterDefinition<Item>(
         label: "Expiring soon",
-        predicate: (it) =>
-            calculateItemStatus(it, expirySoonDays: expirySoonDays).expiry ==
-            ExpiryStatus.expiringSoon,
+        predicate: (it) {
+          final status = calculateItemStatus(
+            it,
+            expirySoonDays: expirySoonDays,
+          );
+          // Expiring soon AND not out of stock
+          return status.expiry == ExpiryStatus.expiringSoon &&
+              !status.isOutOfStock;
+        },
       ),
       FilterDefinition<Item>(
         label: "Expired",
-        predicate: (it) =>
-            calculateItemStatus(it, expirySoonDays: expirySoonDays).expiry ==
-            ExpiryStatus.expired,
+        predicate: (it) {
+          final status = calculateItemStatus(
+            it,
+            expirySoonDays: expirySoonDays,
+          );
+          // Expired AND not out of stock
+          return status.expiry == ExpiryStatus.expired && !status.isOutOfStock;
+        },
       ),
       FilterDefinition<Item>(
         label: "Out of stock",
-        predicate: (it) =>
-            calculateItemStatus(it, expirySoonDays: expirySoonDays).stock ==
-            StockStatus.outOfStock,
+        predicate: (it) {
+          final status = calculateItemStatus(
+            it,
+            expirySoonDays: expirySoonDays,
+          );
+          return status.isOutOfStock;
+        },
       ),
-      // No "All" here – All is handled by SearchFilterList via showAllFilter.
+      // "All" is handled by SearchFilterList via showAllFilter
     ];
   }
 
