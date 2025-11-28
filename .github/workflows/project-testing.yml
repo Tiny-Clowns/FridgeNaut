@@ -1,8 +1,12 @@
-name: "Issues: To Test → Testing when PR merged into test"
+name: "Issues: To Test → Testing when code reaches test"
 
 on:
   pull_request:
     types: [closed]
+
+  push:
+    branches:
+      - test
 
 permissions:
   contents: read
@@ -11,47 +15,75 @@ permissions:
 
 jobs:
   update_issue_status_labels:
-    # Only when merged into test
-    if: >
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'test'
     runs-on: ubuntu-latest
+
     steps:
-      - name: Update status labels for issues referenced in PR
+      - name: Update status labels for issues referenced in PR or push
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
-            const pr    = context.payload.pull_request;
-            const prNumber = pr.number;
+            const eventName = context.eventName;
 
             const issueRegex = /#(\d{1,7})/g;
             const issueNumbers = new Set();
 
-            // 1) From PR title + body
-            const prText = `${pr.title}\n\n${pr.body || ""}`;
-            let match;
-            while ((match = issueRegex.exec(prText)) !== null) {
-              issueNumbers.add(parseInt(match[1], 10));
-            }
+            if (eventName === "pull_request") {
+              const pr = context.payload.pull_request;
 
-            // 2) From all commit messages in the PR
-            const commits = await github.paginate(
-              github.rest.pulls.listCommits,
-              { owner, repo, pull_number: prNumber, per_page: 100 }
-            );
-            for (const c of commits) {
-              const msg = c.commit?.message || "";
-              let m;
-              while ((m = issueRegex.exec(msg)) !== null) {
-                issueNumbers.add(parseInt(m[1], 10));
+              // Only when merged into test
+              if (!pr.merged || pr.base.ref !== "test") {
+                core.info("PR is not merged into test, skipping.");
+                return;
               }
+
+              const prNumber = pr.number;
+
+              // 1) From PR title + body
+              const prText = `${pr.title}\n\n${pr.body || ""}`;
+              let match;
+              while ((match = issueRegex.exec(prText)) !== null) {
+                issueNumbers.add(parseInt(match[1], 10));
+              }
+
+              // 2) From all commit messages in the PR
+              const commits = await github.paginate(
+                github.rest.pulls.listCommits,
+                { owner, repo, pull_number: prNumber, per_page: 100 }
+              );
+              for (const c of commits) {
+                const msg = c.commit?.message || "";
+                let m;
+                while ((m = issueRegex.exec(msg)) !== null) {
+                  issueNumbers.add(parseInt(m[1], 10));
+                }
+              }
+
+            } else if (eventName === "push") {
+              // Safety: we only configured push on test, but double-check
+              if (context.ref !== "refs/heads/test") {
+                core.info(`Push is not to test (${context.ref}), skipping.`);
+                return;
+              }
+
+              // Extract from commit messages in this push
+              const commits = context.payload.commits || [];
+              for (const c of commits) {
+                const msg = c.message || "";
+                let m;
+                while ((m = issueRegex.exec(msg)) !== null) {
+                  issueNumbers.add(parseInt(m[1], 10));
+                }
+              }
+            } else {
+              core.info(`Unsupported event: ${eventName}, skipping.`);
+              return;
             }
 
             if (issueNumbers.size === 0) {
-              core.info("No #<issue> references found in PR title/body/commits.");
+              core.info("No #<issue> references found in PR / commits.");
               return;
             }
 
