@@ -1,42 +1,57 @@
-name: "Issues: To Test → Testing on test branch"
+name: "Issues: To Test → Testing when PR merged into test"
 
 on:
-  push:
-    branches:
-      - test
+  pull_request:
+    types: [closed]
 
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 jobs:
   update_issue_status_labels:
+    # Only when merged into test
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'test'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Update status labels for issues referenced in test branch commits
+      - name: Update status labels for issues referenced in PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
+            const pr    = context.payload.pull_request;
+            const prNumber = pr.number;
 
-            const commits = context.payload.commits || [];
             const issueRegex = /#(\d{1,7})/g;
             const issueNumbers = new Set();
 
-            // Collect all referenced issues from commit messages
+            // 1) From PR title + body
+            const prText = `${pr.title}\n\n${pr.body || ""}`;
+            let match;
+            while ((match = issueRegex.exec(prText)) !== null) {
+              issueNumbers.add(parseInt(match[1], 10));
+            }
+
+            // 2) From all commit messages in the PR
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              { owner, repo, pull_number: prNumber, per_page: 100 }
+            );
             for (const c of commits) {
-              const msg = c.message || "";
-              let match;
-              while ((match = issueRegex.exec(msg)) !== null) {
-                issueNumbers.add(parseInt(match[1], 10));
+              const msg = c.commit?.message || "";
+              let m;
+              while ((m = issueRegex.exec(msg)) !== null) {
+                issueNumbers.add(parseInt(m[1], 10));
               }
             }
 
             if (issueNumbers.size === 0) {
-              core.info("No #<issue> references found in commit messages.");
+              core.info("No #<issue> references found in PR title/body/commits.");
               return;
             }
 
@@ -56,7 +71,7 @@ jobs:
                   issue_number: num,
                 });
                 issue = res.data;
-              } catch (err) {
+              } catch {
                 core.warning(`Issue #${num} not found in ${owner}/${repo}, skipping.`);
                 continue;
               }
@@ -69,9 +84,7 @@ jobs:
               const currentStatus =
                 labels.find(l => STATUS_LABELS.includes(l)) || null;
 
-              core.info(
-                `Current status for #${num}: ${currentStatus ?? "none"}`
-              );
+              core.info(`Current status for #${num}: ${currentStatus ?? "none"}`);
 
               // If already Testing / To Fix / Done → ignore
               if (["Testing", "To Fix", "Done"].includes(currentStatus)) {
