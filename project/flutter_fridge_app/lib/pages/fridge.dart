@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/domain/inventory/inventory_event_type.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -21,10 +23,18 @@ class FridgePage extends ConsumerStatefulWidget {
   ConsumerState<FridgePage> createState() => _FridgePageState();
 }
 
+enum _ItemFilter { all, lowStock, expiringSoon, expired, outOfStock }
+
 class _FridgePageState extends ConsumerState<FridgePage> {
   List<Item> _items = [];
   bool _loading = true;
   int _expirySoonDays = 3;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+  _ItemFilter _activeFilter = _ItemFilter.all;
+
+  int expirySoonDays = 3;
 
   @override
   void initState() {
