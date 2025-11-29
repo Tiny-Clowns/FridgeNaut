@@ -8,24 +8,90 @@ on:
     branches:
       - test
 
+env:
+  PROJECT_URL: https://github.com/orgs/Tiny-Clowns/projects/6/views/1
+
 permissions:
   contents: read
-  issues: write
+  issues: read
   pull-requests: read
+  repository-projects: write
 
 jobs:
-  update_issue_status_labels:
+  update_issue_status:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Update status labels for issues referenced in PR or push
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: Tiny-Clowns
+
+      - name: Resolve Project v2 Status field
+        id: proj
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app.outputs.token }}
+          script: |
+            const m = (process.env.PROJECT_URL||"").match(/\/orgs\/([^/]+)\/projects\/(\d+)/i);
+            if (!m) return core.setFailed("Bad PROJECT_URL");
+            const owner = m[1], number = parseInt(m[2],10);
+
+            const r = await github.graphql(`query($o:String!,$n:Int!){
+              organization(login:$o){
+                projectV2(number:$n){
+                  id
+                  fields(first:50){
+                    nodes{
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options{ id name }
+                      }
+                    }
+                  }
+                }
+              }
+            }`, { o: owner, n: number });
+
+            const p = r.organization?.projectV2;
+            if (!p) return core.setFailed("Project not found");
+
+            const status = (p.fields.nodes||[]).find(f => f?.name === "Status");
+            if (!status) return core.setFailed("Status field not found");
+
+            function opt(name){
+              return status.options.find(o => o.name === name)?.id || "";
+            }
+
+            core.setOutput("projectId", p.id);
+            core.setOutput("statusFieldId", status.id);
+            core.setOutput("toTestId",   opt("To Test"));
+            core.setOutput("testingId",  opt("Testing"));
+            core.setOutput("toFixId",    opt("To Fix"));
+            core.setOutput("doneId",     opt("Done"));
+            core.setOutput("invalidId",  opt("Invalid"));
+
+      - name: Update project Status for referenced issues
+        if: ${{ steps.proj.outputs.projectId != '' && steps.proj.outputs.statusFieldId != '' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app.outputs.token }}
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
             const eventName = context.eventName;
+
+            const projectId     = "${{ steps.proj.outputs.projectId }}";
+            const statusFieldId = "${{ steps.proj.outputs.statusFieldId }}";
+            const toTestId      = "${{ steps.proj.outputs.toTestId }}";
+            const testingId     = "${{ steps.proj.outputs.testingId }}";
+            const toFixId       = "${{ steps.proj.outputs.toFixId }}";
+            const doneId        = "${{ steps.proj.outputs.doneId }}";
+            const invalidId     = "${{ steps.proj.outputs.invalidId }}";
 
             const issueRegex = /#(\d{1,7})/g;
             const issueNumbers = new Set();
@@ -35,23 +101,19 @@ jobs:
 
               // Only when merged into test
               if (!pr.merged || pr.base.ref !== "test") {
-                core.info("PR is not merged into test, skipping.");
+                core.info("PR not merged into test, skipping.");
                 return;
               }
 
-              const prNumber = pr.number;
-
-              // 1) From PR title + body
               const prText = `${pr.title}\n\n${pr.body || ""}`;
               let match;
               while ((match = issueRegex.exec(prText)) !== null) {
                 issueNumbers.add(parseInt(match[1], 10));
               }
 
-              // 2) From all commit messages in the PR
               const commits = await github.paginate(
                 github.rest.pulls.listCommits,
-                { owner, repo, pull_number: prNumber, per_page: 100 }
+                { owner, repo, pull_number: pr.number, per_page: 100 }
               );
               for (const c of commits) {
                 const msg = c.commit?.message || "";
@@ -62,13 +124,11 @@ jobs:
               }
 
             } else if (eventName === "push") {
-              // Safety: we only configured push on test, but double-check
               if (context.ref !== "refs/heads/test") {
                 core.info(`Push is not to test (${context.ref}), skipping.`);
                 return;
               }
 
-              // Extract from commit messages in this push
               const commits = context.payload.commits || [];
               for (const c of commits) {
                 const msg = c.message || "";
@@ -82,80 +142,95 @@ jobs:
               return;
             }
 
-            if (issueNumbers.size === 0) {
-              core.info("No #<issue> references found in PR / commits.");
+            if (!issueNumbers.size) {
+              core.info("No #<issue> references found.");
               return;
             }
 
             core.info(`Found issue numbers: ${[...issueNumbers].join(", ")}`);
 
-            const STATUS_LABELS = ["To Test", "Testing", "To Fix", "Done", "Invalid"];
+            async function issueNodeId(num){
+              const q = await github.graphql(`query($o:String!,$r:String!,$n:Int!){
+                repository(owner:$o,name:$r){
+                  issue(number:$n){ id }
+                }
+              }`, { o: owner, r: repo, n: num }).catch(()=>null);
+              return q?.repository?.issue?.id || null;
+            }
 
-            for (const num of issueNumbers) {
-              core.info(`Processing issue #${num}`);
+            async function addItem(contentId){
+              const a = await github.graphql(`mutation($p:ID!,$c:ID!){
+                addProjectV2ItemById(input:{projectId:$p,contentId:$c}){
+                  item{ id }
+                }
+              }`, { p: projectId, c: contentId }).catch(()=>null);
+              return a?.addProjectV2ItemById?.item?.id || null;
+            }
 
-              // Get the issue
-              let issue;
-              try {
-                const res = await github.rest.issues.get({
-                  owner,
-                  repo,
-                  issue_number: num,
-                });
-                issue = res.data;
-              } catch {
-                core.warning(`Issue #${num} not found in ${owner}/${repo}, skipping.`);
+            async function currentStatus(itemId){
+              const q = await github.graphql(`query($id:ID!){
+                node(id:$id){
+                  ... on ProjectV2Item {
+                    fieldValues(first:50){
+                      nodes{
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                          field { ... on ProjectV2SingleSelectField { name id } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`, { id: itemId });
+              const v = q?.node?.fieldValues?.nodes || [];
+              return v.find(x => x.field?.name === "Status")?.name || null;
+            }
+
+            async function setStatus(itemId, optionId){
+              if (!optionId) {
+                core.warning("No option id for desired status, skipping.");
+                return;
+              }
+              await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                updateProjectV2ItemFieldValue(
+                  input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}
+                ){
+                  clientMutationId
+                }
+              }`, { p: projectId, i: itemId, f: statusFieldId, o: optionId });
+            }
+
+            for (const n of issueNumbers) {
+              core.info(`Processing issue #${n}`);
+              const issueId = await issueNodeId(n);
+              if (!issueId) {
+                core.warning(`#${n}: issue not found, skipping.`);
                 continue;
               }
 
-              // Normalize labels to strings
-              const labels = issue.labels.map(l =>
-                typeof l === "string" ? l : l.name
-              );
-
-              const currentStatus =
-                labels.find(l => STATUS_LABELS.includes(l)) || null;
-
-              core.info(`Current status for #${num}: ${currentStatus ?? "none"}`);
-
-              // If already Testing / To Fix / Done → ignore
-              if (["Testing", "To Fix", "Done"].includes(currentStatus)) {
-                core.info(
-                  `#${num} already ${currentStatus} (Testing/To Fix/Done). Skipping.`
-                );
+              const itemId = await addItem(issueId);
+              if (!itemId) {
+                core.warning(`#${n}: could not ensure project item, skipping.`);
                 continue;
               }
 
-              let newStatus;
+              const cur = await currentStatus(itemId);
+              core.info(`#${n} current project Status: ${cur ?? "none"}`);
 
-              if (currentStatus === "To Test") {
-                // Only To Test → Testing
-                newStatus = "Testing";
-                core.info(`#${num}: To Test → Testing`);
+              if (cur === "Testing" || cur === "To Fix" || cur === "Done") {
+                core.info(`#${n} already ${cur}, skipping.`);
+                continue;
+              }
+
+              let targetId;
+              if (cur === "To Test") {
+                core.info(`#${n}: To Test → Testing`);
+                targetId = testingId;
               } else {
-                // Anything else (no status, or some other status) → Invalid
-                newStatus = "Invalid";
-                core.info(
-                  `#${num}: current status '${currentStatus}' is not To Test/Testing/To Fix/Done → Invalid`
-                );
+                core.info(`#${n}: current status '${cur}' → Invalid`);
+                targetId = invalidId;
               }
 
-              // Remove any existing status labels, then add the new one
-              const newLabels = labels.filter(
-                l => !STATUS_LABELS.includes(l)
-              );
-              if (!newLabels.includes(newStatus)) {
-                newLabels.push(newStatus);
-              }
-
-              await github.rest.issues.update({
-                owner,
-                repo,
-                issue_number: num,
-                labels: newLabels,
-              });
-
-              core.info(
-                `#${num} labels updated to: ${newLabels.join(", ")}`
-              );
+              await setStatus(itemId, targetId);
+              core.info(`#${n} project Status updated.`);
             }
