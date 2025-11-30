@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "package:flutter_fridge_app/common/widgets/search_filter_list.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
 import "package:flutter_fridge_app/models/item.dart";
+import "package:flutter_fridge_app/common/extensions/string_extensions.dart";
 
 class FridgeItemList extends StatelessWidget {
   final List<Item> items;
@@ -86,7 +87,7 @@ class FridgeItemList extends StatelessWidget {
     return ListTile(
       leading: _buildItemImage(it),
       title: Text(
-        it.name,
+        it.name.toCapitalisedWords(),
         style: const TextStyle(color: Colors.black, fontSize: 18),
       ),
       titleAlignment: ListTileTitleAlignment.top,
