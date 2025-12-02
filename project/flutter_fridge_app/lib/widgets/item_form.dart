@@ -1,8 +1,6 @@
-import "dart:io";
-
 import "package:flutter/material.dart";
-import "package:image_picker/image_picker.dart";
 import "package:flutter_fridge_app/models/item.dart";
+import "package:flutter_fridge_app/widgets/item_image_selector.dart";
 
 class ItemForm extends StatefulWidget {
   final Item? existing;
@@ -23,8 +21,6 @@ class _ItemFormState extends State<ItemForm> {
   bool _toBuy = false;
   bool _notifyLow = true;
   bool _notifyExp = true;
-
-  final ImagePicker _picker = ImagePicker();
   String? _imagePath;
 
   @override
@@ -73,20 +69,6 @@ class _ItemFormState extends State<ItemForm> {
     return expDateOnly.isBefore(todayUtc);
   }
 
-  Future<void> _pickImage() async {
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 100,
-    );
-    if (picked != null) {
-      setState(() {
-        _imagePath = picked.path;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -112,32 +94,15 @@ class _ItemFormState extends State<ItemForm> {
               const SizedBox(height: 12),
 
               // Image selector
-              Center(
-                child: InkWell(
-                  onTap: _pickImage,
-                  borderRadius: BorderRadius.circular(40),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundImage:
-                            (_imagePath != null && _imagePath!.isNotEmpty)
-                            ? FileImage(File(_imagePath!))
-                            : null,
-                        child: (_imagePath == null || _imagePath!.isEmpty)
-                            ? const Icon(Icons.camera_alt)
-                            : null,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _imagePath == null ? "Add picture" : "Change picture",
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
+              ItemImageSelector(
+                imagePath: _imagePath,
+                onImageChanged: (path) {
+                  setState(() {
+                    _imagePath = path;
+                  });
+                },
               ),
+              const SizedBox(height: 16),
               const SizedBox(height: 16),
 
               TextFormField(
