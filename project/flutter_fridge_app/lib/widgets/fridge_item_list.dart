@@ -9,6 +9,7 @@ import "package:flutter_fridge_app/common/extensions/string_extensions.dart";
 class FridgeItemList extends StatelessWidget {
   final List<Item> items;
   final int expirySoonDays;
+  final String currencySymbol;
   final Future<void> Function() onRefresh;
   final Future<void> Function(Item item) onEdit;
   final Future<void> Function(Item item) onIncrement;
@@ -23,6 +24,7 @@ class FridgeItemList extends StatelessWidget {
     super.key,
     required this.items,
     required this.expirySoonDays,
+    required this.currencySymbol,
     required this.onRefresh,
     required this.onEdit,
     required this.onIncrement,
@@ -103,7 +105,8 @@ class FridgeItemList extends StatelessWidget {
             if (it.pricePerUnit != null) ...[
               const TextSpan(text: " | "),
               TextSpan(
-                text: "${it.pricePerUnit!.toStringAsFixed(2)} / ${it.unit}",
+                text:
+                    "$currencySymbol${it.pricePerUnit!.toStringAsFixed(2)} / ${it.unit}",
               ),
             ],
             if (expiryText != null) ...[

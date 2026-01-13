@@ -1,4 +1,3 @@
-// lib/pages/settings.dart
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -6,6 +5,9 @@ import "package:shared_preferences/shared_preferences.dart";
 
 import "package:flutter_fridge_app/domain/calendar/user_calendar_settings.dart";
 import "package:flutter_fridge_app/services/user_calendar_settings_service.dart";
+
+import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -27,6 +29,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _loading = true;
   UserCalendarSettings _calendarSettings =
       const UserCalendarSettings.defaultValues();
+
+  String _priceSymbol = defaultPriceSymbol;
 
   static const _weekdayNames = <String>[
     "Sunday",
@@ -81,9 +85,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final calendar = await _calendarSettingsService.load();
     final expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
 
+    final priceSymbol =
+        prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
+
     setState(() {
       _calendarSettings = calendar;
       _expirySoonDaysController.text = expirySoonDays.toString();
+      _priceSymbol = priceSymbol;
       _loading = false;
     });
   }
@@ -102,6 +110,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save expirySoonDays directly (simple scalar setting)
     await prefs.setInt("expiry_soon_days", expirySoonDays);
+
+    // Save price symbol (and notify the whole app via provider)
+    await ref.read(priceSymbolProvider.notifier).setSymbol(_priceSymbol);
 
     if (_expirySoonDaysController.text.isEmpty) {
       _expirySoonDaysController.text = expirySoonDays.toString();
@@ -237,6 +248,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  Widget _buildPriceSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Prices", style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _priceSymbol,
+          decoration: const InputDecoration(
+            labelText: "Price symbol",
+            helperText: "Used when displaying prices (e.g. £12.34).",
+          ),
+          items: currencyOptions
+              .map(
+                (o) => DropdownMenuItem<String>(
+                  value: o.symbol,
+                  child: Text("${o.label} (${o.symbol})"),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _priceSymbol = value);
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildExpirySoonSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,6 +325,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           children: [
             const SizedBox(height: 16),
             _buildCalendarSection(context),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            _buildPriceSection(context),
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 16),
