@@ -9,6 +9,9 @@ import "package:flutter_fridge_app/models/inventory_event.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_list.dart";
 
+import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
+
 class FridgePage extends ConsumerStatefulWidget {
   /// One of: "low", "expSoon", "expired", "outOfStock", or null.
   ///
@@ -50,11 +53,17 @@ class _FridgePageState extends ConsumerState<FridgePage> {
 
   String _genId() => DateTime.now().microsecondsSinceEpoch.toString();
 
+  String _currencySymbolNow() {
+    return ref
+        .read(priceSymbolProvider)
+        .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
+  }
+
   Future<void> _addItem() async {
     final Item? item = await showModalBottomSheet<Item>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const ItemForm(),
+      builder: (_) => ItemForm(currencySymbol: _currencySymbolNow()),
     );
     if (item == null) return;
 
@@ -80,7 +89,8 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     final Item? updated = await showModalBottomSheet<Item>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => ItemForm(existing: old),
+      builder: (_) =>
+          ItemForm(existing: old, currencySymbol: _currencySymbolNow()),
     );
     if (updated == null) return;
 
@@ -129,11 +139,16 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final currencySymbol = ref
+        .watch(priceSymbolProvider)
+        .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
+
     return Scaffold(
       appBar: AppBar(title: const Text("Fridge")),
       body: FridgeItemList(
         items: _items,
         expirySoonDays: _expirySoonDays,
+        currencySymbol: currencySymbol,
         initialFilterKey: widget.initialFilter,
         onRefresh: _load,
         onEdit: _editItem,

@@ -3,6 +3,8 @@ import "package:flutter_fridge_app/widgets/item_image_selector.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/common/widgets/confirm_cancel_form.dart";
 
+import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+
 bool _sameDateOnly(DateTime? a, DateTime? b) {
   if (a == null || b == null) return a == b;
   final ad = DateTime.utc(a.year, a.month, a.day);
@@ -52,7 +54,13 @@ class _ItemFormSnapshot {
 
 class ItemForm extends StatefulWidget {
   final Item? existing;
-  const ItemForm({super.key, this.existing});
+  final String currencySymbol;
+
+  const ItemForm({
+    super.key,
+    this.existing,
+    this.currencySymbol = defaultPriceSymbol,
+  });
 
   @override
   State<ItemForm> createState() => _ItemFormState();
@@ -273,8 +281,9 @@ class _ItemFormState extends State<ItemForm> {
                   Expanded(
                     child: TextFormField(
                       controller: _price,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: "Price per unit",
+                        prefixText: "${widget.currencySymbol} ",
                       ),
                       keyboardType: _numberKeyboard,
                       validator: _validateRequiredNonNegativeNumber,
