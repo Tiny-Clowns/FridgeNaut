@@ -4,59 +4,11 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/common/widgets/stat_card.dart";
-import "package:shared_preferences/shared_preferences.dart";
+import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
+import "package:flutter_fridge_app/providers/alerts_provider.dart";
 
-class HomePage extends ConsumerStatefulWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
-  @override
-  ConsumerState<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends ConsumerState<HomePage> {
-  Map<String, List<Item>> _alerts = {
-    "low": <Item>[],
-    "expSoon": <Item>[],
-    "expired": <Item>[],
-    "outOfStock": <Item>[],
-    "toBuy": <Item>[],
-  };
-  bool _loading = true;
-  String? _err;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _err = null;
-    });
-    try {
-      final repo = ref.read(repoProvider);
-      final prefs = await SharedPreferences.getInstance();
-      final expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
-      final alerts = await repo.alertsLocal(days: expirySoonDays);
-
-      _alerts = {
-        "low": alerts["low"] ?? <Item>[],
-        "expSoon": alerts["expSoon"] ?? <Item>[],
-        "expired": alerts["expired"] ?? <Item>[],
-        "outOfStock": alerts["outOfStock"] ?? <Item>[],
-        "toBuy": alerts["toBuy"] ?? <Item>[],
-      };
-    } catch (e) {
-      _err = e.toString();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-    }
-  }
 
   void _openFridgeWithFilter(BuildContext context, String filterKey) {
     final shell = Shell.of(context);
@@ -71,15 +23,29 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_err != null) return Center(child: Text("Error: $_err"));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alertsAsync = ref.watch(alertsNotifierProvider);
 
-    final lowItems = _alerts["low"] ?? <Item>[];
-    final expSoonItems = _alerts["expSoon"] ?? <Item>[];
-    final expiredItems = _alerts["expired"] ?? <Item>[];
-    final outOfStockItems = _alerts["outOfStock"] ?? <Item>[];
-    final toBuyItems = _alerts["toBuy"] ?? <Item>[];
+    return Scaffold(
+      appBar: AppBar(title: const Text("Home")),
+      body: alertsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _buildErrorView(context, ref, error),
+        data: (alerts) => _buildAlertsList(context, ref, alerts),
+      ),
+    );
+  }
+
+  Widget _buildAlertsList(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, List<Item>> alerts,
+  ) {
+    final lowItems = alerts[AlertKeys.low] ?? <Item>[];
+    final expSoonItems = alerts[AlertKeys.expiringSoon] ?? <Item>[];
+    final expiredItems = alerts[AlertKeys.expired] ?? <Item>[];
+    final outOfStockItems = alerts[AlertKeys.outOfStock] ?? <Item>[];
+    final toBuyItems = alerts[AlertKeys.toBuy] ?? <Item>[];
 
     // Only count items that are actually in stock (qty > 0)
     final low = lowItems.where((it) => it.quantity > 0).length;
@@ -90,38 +56,67 @@ class _HomePageState extends ConsumerState<HomePage> {
     final oos = outOfStockItems.length;
     final buy = toBuyItems.length;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Home")),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(alertsNotifierProvider.notifier).refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          StatCard(
+            title: "Low stock",
+            count: low,
+            onTap: () => _openFridgeWithFilter(context, AlertKeys.low),
+          ),
+          StatCard(
+            title: "Expiring soon",
+            count: expSoon,
+            onTap: () => _openFridgeWithFilter(context, AlertKeys.expiringSoon),
+          ),
+          StatCard(
+            title: "Expired",
+            count: expired,
+            onTap: () => _openFridgeWithFilter(context, AlertKeys.expired),
+          ),
+          StatCard(
+            title: "Out of stock",
+            count: oos,
+            onTap: () => _openFridgeWithFilter(context, AlertKeys.outOfStock),
+          ),
+          StatCard(
+            title: "Planned to buy",
+            count: buy,
+            // no navigation
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorView(BuildContext context, WidgetRef ref, Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            StatCard(
-              title: "Low stock",
-              count: low,
-              onTap: () => _openFridgeWithFilter(context, "low"),
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              "Failed to load alerts",
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            StatCard(
-              title: "Expiring soon",
-              count: expSoon,
-              onTap: () => _openFridgeWithFilter(context, "expSoon"),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            StatCard(
-              title: "Expired",
-              count: expired,
-              onTap: () => _openFridgeWithFilter(context, "expired"),
-            ),
-            StatCard(
-              title: "Out of stock",
-              count: oos,
-              onTap: () => _openFridgeWithFilter(context, "outOfStock"),
-            ),
-            StatCard(
-              title: "Planned to buy",
-              count: buy,
-              // no navigation
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () =>
+                  ref.read(alertsNotifierProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: const Text("Retry"),
             ),
           ],
         ),

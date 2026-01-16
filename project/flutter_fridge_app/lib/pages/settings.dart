@@ -6,6 +6,7 @@ import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_fridge_app/domain/calendar/user_calendar_settings.dart";
 import "package:flutter_fridge_app/services/user_calendar_settings_service.dart";
 
+import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
 
@@ -83,7 +84,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final calendar = await _calendarSettingsService.load();
-    final expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
+    final expirySoonDays = normaliseExpirySoonDays(
+      prefs.getInt(expirySoonDaysPrefKey),
+    );
 
     final priceSymbol =
         prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
@@ -99,9 +102,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _save() async {
     final rawText = _expirySoonDaysController.text.trim();
     final parsed = int.tryParse(rawText);
-    final expirySoonDays = (parsed == null || parsed < 1 || parsed > 1000)
-        ? 3
-        : parsed;
+    final expirySoonDays = normaliseExpirySoonDays(parsed);
 
     final prefs = await SharedPreferences.getInstance();
 
@@ -109,7 +110,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     await _calendarSettingsService.save(_calendarSettings);
 
     // Save expirySoonDays directly (simple scalar setting)
-    await prefs.setInt("expiry_soon_days", expirySoonDays);
+    await prefs.setInt(expirySoonDaysPrefKey, expirySoonDays);
 
     // Save price symbol (and notify the whole app via provider)
     await ref.read(priceSymbolProvider.notifier).setSymbol(_priceSymbol);
@@ -285,9 +286,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         const SizedBox(height: 16),
         TextField(
           controller: _expirySoonDaysController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: "Expiry Soon Days",
-            helperText: "Between 1 and 1000 please. Default is 3",
+            helperText:
+                "Between $expirySoonDaysMin and $expirySoonDaysMax. Default is $expirySoonDaysDefault.",
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [
@@ -295,7 +297,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             TextInputFormatter.withFunction((oldValue, newValue) {
               if (newValue.text.isEmpty) return newValue;
               final n = int.tryParse(newValue.text);
-              if (n == null || n < 1 || n > 1000) return oldValue;
+              if (n == null || n < expirySoonDaysMin || n > expirySoonDaysMax) {
+                return oldValue;
+              }
               return newValue;
             }),
           ],
