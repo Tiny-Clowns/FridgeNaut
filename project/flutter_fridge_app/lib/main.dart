@@ -2,12 +2,15 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "package:flutter_fridge_app/data/repository.dart";
+import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/pages/reports.dart";
 import "package:flutter_fridge_app/pages/settings.dart";
 
-final repoProvider = Provider<Repo>((_) => Repo());
+/// Global provider for the repository.
+/// Using the interface type allows for easy testing with mock implementations.
+final repoProvider = Provider<IRepo>((_) => Repo());
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +48,8 @@ class Shell extends ConsumerStatefulWidget {
 
 class ShellState extends ConsumerState<Shell> {
   int _idx = 0;
-  // "low", "expSoon", "expired", "outOfStock" or null
+  // One of: AlertKeys.low, AlertKeys.expiringSoon, AlertKeys.expired,
+  // AlertKeys.outOfStock, or null.
   String? _fridgeInitialFilter;
 
   void navigateToFridge(String? filterKey) {

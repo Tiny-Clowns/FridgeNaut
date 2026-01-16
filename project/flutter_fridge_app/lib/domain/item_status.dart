@@ -1,3 +1,4 @@
+import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
 import "package:flutter_fridge_app/models/item.dart";
 
 enum StockStatus { inStock, low, outOfStock }
@@ -26,13 +27,12 @@ ItemStatus calculateItemStatus(
   DateTime? now,
 }) {
   final current = now ?? DateTime.now();
-  final today = DateTime(current.year, current.month, current.day);
+  final today = dateOnlyLocal(current);
 
   // ----- Expiry -----
   ExpiryStatus expiryStatus = ExpiryStatus.none;
   if (item.expirationDate != null) {
-    final localExp = item.expirationDate!.toLocal();
-    final expDateOnly = DateTime(localExp.year, localExp.month, localExp.day);
+    final expDateOnly = dateOnlyLocal(item.expirationDate!);
 
     final daysDiff = expDateOnly.difference(today).inDays;
     if (daysDiff < 0) {

@@ -1,14 +1,41 @@
 import "dart:async";
+import "dart:developer" as developer;
+import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
+import "package:flutter_fridge_app/common/utils/result.dart";
+import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:flutter_fridge_app/domain/inventory/inventory_event_rules.dart";
+import "package:flutter_fridge_app/domain/reports/report_range.dart";
 import "package:sqflite/sqflite.dart";
 
 import "db.dart";
+import "repository_interface.dart";
 import "package:flutter_fridge_app/models/models.dart";
 
-class Repo {
+/// SQLite implementation of [IRepo].
+class Repo implements IRepo {
   Future<Database> get _db async => await AppDb.instance;
 
-  Future<void> upsertItem(Item item) async {
+  void _logError(String operation, Object error, [StackTrace? stackTrace]) {
+    developer.log(
+      "Repo.$operation failed",
+      error: error,
+      stackTrace: stackTrace,
+      name: "FridgeNaut.Repo",
+    );
+  }
+
+  Map<String, Object?> _eventToDb(InventoryEvent e) => {
+    "id": e.id,
+    "itemId": e.itemId,
+    "deltaQuantity": e.deltaQuantity,
+    "unitPriceAtEvent": e.unitPriceAtEvent,
+    "type": inventoryEventTypeToString(e.type),
+    "occurredAt": e.occurredAt.toIso8601String(),
+    "createdAt": e.createdAt.toIso8601String(),
+  };
+
+  @override
+  Future<Result<void>> upsertItem(Item item) async {
     try {
       final db = await _db;
       await db.insert(
@@ -16,58 +43,67 @@ class Repo {
         item.toDb(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    } catch (_) {}
-  }
-
-  Future<void> deleteItem(String id) async {
-    try {
-      final db = await _db;
-      await db.delete("items", where: "id = ?", whereArgs: [id]);
-    } catch (_) {}
-  }
-
-  Future<List<Item>> allItems() async {
-    try {
-      final db = await _db;
-      final rows = await db.query("items", orderBy: "name");
-      return rows.map((r) => Item.fromDb(r)).toList();
-    } catch (_) {
-      return <Item>[];
+      return const Success(null);
+    } catch (e, st) {
+      _logError("upsertItem", e, st);
+      return Failure("Failed to save item: ${item.name}", error: e);
     }
   }
 
-  Future<void> addEvent(InventoryEvent e) async {
+  @override
+  Future<Result<void>> deleteItem(String id) async {
     try {
       final db = await _db;
-      await db.insert("events", {
-        "id": e.id,
-        "itemId": e.itemId,
-        "deltaQuantity": e.deltaQuantity,
-        "unitPriceAtEvent": e.unitPriceAtEvent,
-        "type": inventoryEventTypeToString(e.type),
-        "occurredAt": e.occurredAt.toIso8601String(),
-        "createdAt": e.createdAt.toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } catch (_) {}
+      await db.delete("items", where: "id = ?", whereArgs: [id]);
+      return const Success(null);
+    } catch (e, st) {
+      _logError("deleteItem", e, st);
+      return Failure("Failed to delete item", error: e);
+    }
+  }
+
+  @override
+  Future<Result<List<Item>>> allItems() async {
+    try {
+      final db = await _db;
+      final rows = await db.query("items", orderBy: "name");
+      return Success(rows.map((r) => Item.fromDb(r)).toList());
+    } catch (e, st) {
+      _logError("allItems", e, st);
+      return Failure("Failed to load items", error: e);
+    }
+  }
+
+  @override
+  Future<Result<void>> addEvent(InventoryEvent e) async {
+    try {
+      final db = await _db;
+      await db.insert(
+        "events",
+        _eventToDb(e),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return const Success(null);
+    } catch (err, st) {
+      _logError("addEvent", err, st);
+      return Failure("Failed to record event", error: err);
+    }
   }
 
   /// Apply an event and update the item's quantity atomically.
   /// Used for +/- buttons where the event defines the delta.
-  Future<void> applyEventLocally(InventoryEvent e) async {
+  @override
+  Future<Result<void>> applyEventLocally(InventoryEvent e) async {
     try {
       final db = await _db;
       final nowIso = e.createdAt.toIso8601String();
 
       await db.transaction((txn) async {
-        await txn.insert("events", {
-          "id": e.id,
-          "itemId": e.itemId,
-          "deltaQuantity": e.deltaQuantity,
-          "unitPriceAtEvent": e.unitPriceAtEvent,
-          "type": inventoryEventTypeToString(e.type),
-          "occurredAt": e.occurredAt.toIso8601String(),
-          "createdAt": e.createdAt.toIso8601String(),
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(
+          "events",
+          _eventToDb(e),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
 
         // Persist new quantity, clamped at 0
         await txn.rawUpdate(
@@ -80,11 +116,16 @@ class Repo {
           [e.deltaQuantity, nowIso, e.itemId],
         );
       });
-    } catch (_) {}
+      return const Success(null);
+    } catch (err, st) {
+      _logError("applyEventLocally", err, st);
+      return Failure("Failed to update quantity", error: err);
+    }
   }
 
   // ---------- Alerts (HomePage) ----------
 
+  @override
   Map<String, List<Item>> buildAlertsBuckets(
     List<Item> items, {
     required DateTime now,
@@ -92,7 +133,7 @@ class Repo {
     double? threshold,
   }) {
     // Use UTC and strip time-of-day: we compare by calendar date.
-    final today = DateTime.utc(now.year, now.month, now.day);
+    final today = dateOnlyUtc(now);
     final soonLimit = today.add(Duration(days: days)); // today + N days
 
     final lowThresh = threshold;
@@ -109,8 +150,7 @@ class Repo {
       final exp = i.expirationDate;
       if (exp == null) continue;
 
-      final expUtc = exp.toUtc();
-      final expDate = DateTime.utc(expUtc.year, expUtc.month, expUtc.day);
+      final expDate = dateOnlyUtc(exp);
 
       if (expDate.isBefore(today)) {
         // Expiry date < today => expired
@@ -125,15 +165,16 @@ class Repo {
     final toBuy = items.where((i) => i.toBuy).toList();
 
     return {
-      "low": low,
-      "expSoon": expSoon,
-      "expired": expired,
-      "outOfStock": outOfStock,
-      "toBuy": toBuy,
+      AlertKeys.low: low,
+      AlertKeys.expiringSoon: expSoon,
+      AlertKeys.expired: expired,
+      AlertKeys.outOfStock: outOfStock,
+      AlertKeys.toBuy: toBuy,
     };
   }
 
-  Future<Map<String, List<Item>>> alertsLocal({
+  @override
+  Future<Result<Map<String, List<Item>>>> alertsLocal({
     required int days,
     double? threshold,
   }) async {
@@ -144,35 +185,22 @@ class Repo {
       final items = rows.map((r) => Item.fromDb(r)).toList();
 
       final now = DateTime.now().toUtc();
-      return buildAlertsBuckets(
-        items,
-        now: now,
-        days: days,
-        threshold: threshold,
+      return Success(
+        buildAlertsBuckets(items, now: now, days: days, threshold: threshold),
       );
-    } catch (_) {
-      return {
-        "low": [],
-        "expSoon": [],
-        "expired": [],
-        "outOfStock": [],
-        "toBuy": [],
-      };
+    } catch (e, st) {
+      _logError("alertsLocal", e, st);
+      return Failure("Failed to load alerts", error: e);
     }
   }
 
-  Future<Map<String, num>> reportLocal(String range) async {
+  @override
+  Future<Result<Map<String, num>>> reportLocal(ReportRange range) async {
     try {
       final db = await _db;
       final now = DateTime.now().toUtc();
 
-      DateTime from;
-      if (range == "monthly") {
-        from = DateTime.utc(now.year, now.month, 1);
-      } else {
-        // treat everything else as "weekly" for now
-        from = now.subtract(const Duration(days: 7));
-      }
+      final from = range.startFromUtc(now);
 
       // Sum purchase cost and usage from events
       final res = await db.rawQuery(
@@ -192,9 +220,10 @@ class Repo {
       final row = res.first;
       final cost = (row["totalCost"] as num?) ?? 0;
       final usage = (row["totalUsage"] as num?) ?? 0;
-      return {"totalCost": cost, "totalUsage": usage};
-    } catch (_) {
-      return {"totalCost": 0, "totalUsage": 0};
+      return Success({"totalCost": cost, "totalUsage": usage});
+    } catch (e, st) {
+      _logError("reportLocal", e, st);
+      return Failure("Failed to generate report", error: e);
     }
   }
 }
