@@ -5,53 +5,10 @@ import "package:shared_preferences/shared_preferences.dart";
 
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/models/item.dart";
-import "package:flutter_fridge_app/models/inventory_event.dart";
-import "package:flutter_fridge_app/data/repository.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
+import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 
-// ----------------- Fakes -----------------
-
-class FakeRepo extends Repo {
-  FakeRepo({required List<Item> initialItems})
-    : _items = List<Item>.from(initialItems);
-
-  List<Item> _items;
-
-  @override
-  Future<List<Item>> allItems() async => List.unmodifiable(_items);
-
-  @override
-  Future<void> upsertItem(Item item) async {
-    final index = _items.indexWhere((i) => i.id == item.id);
-    if (index == -1) {
-      _items = [..._items, item];
-    } else {
-      _items[index] = item;
-    }
-  }
-
-  @override
-  Future<void> addEvent(InventoryEvent e) async {
-    // no-op for widget tests
-  }
-
-  @override
-  Future<void> applyEventLocally(InventoryEvent e) async {
-    final index = _items.indexWhere((i) => i.id == e.itemId);
-    if (index == -1) return;
-    final current = _items[index];
-    final newQty = current.quantity + e.deltaQuantity;
-    _items[index] = current.copyWith(
-      quantity: newQty < 0 ? 0 : newQty,
-      updatedAt: DateTime.now().toUtc(),
-    );
-  }
-
-  @override
-  Future<void> deleteItem(String id) async {
-    _items = _items.where((i) => i.id != id).toList();
-  }
-}
+import "../helpers/fake_repo.dart";
 
 // ----------------- Helpers -----------------
 
@@ -63,7 +20,7 @@ Future<void> _pumpFridgePage(
   // Make SharedPreferences work in tests
   SharedPreferences.setMockInitialValues({});
 
-  final fakeRepo = FakeRepo(initialItems: items);
+  final fakeRepo = FakeRepo(items: items);
 
   await tester.pumpWidget(
     ProviderScope(
@@ -199,8 +156,12 @@ void main() {
       lowThreshold: 1,
     );
 
-    // IMPORTANT: open Fridge with the "outOfStock" filter so quantity-0 items are visible
-    await _pumpFridgePage(tester, items: [item], initialFilter: "outOfStock");
+    // IMPORTANT: open Fridge with the out-of-stock filter so quantity-0 items are visible
+    await _pumpFridgePage(
+      tester,
+      items: [item],
+      initialFilter: AlertKeys.outOfStock,
+    );
 
     final deleteButtonFinder = find.widgetWithIcon(IconButton, Icons.delete);
     final minusButtonFinder = find.widgetWithIcon(IconButton, Icons.remove);

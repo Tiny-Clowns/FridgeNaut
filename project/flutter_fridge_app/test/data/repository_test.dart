@@ -1,6 +1,7 @@
 import "package:flutter_test/flutter_test.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/data/repository.dart";
+import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 
 Item _item({
   required String id,
@@ -70,8 +71,8 @@ void main() {
         days: 3,
       );
 
-      final expired = result["expired"]!;
-      final expSoon = result["expSoon"]!;
+      final expired = result[AlertKeys.expired]!;
+      final expSoon = result[AlertKeys.expiringSoon]!;
 
       expect(expired, contains(expiredItem));
       expect(expired, isNot(contains(todayItem)));
@@ -96,8 +97,8 @@ void main() {
 
         final result = repo.buildAlertsBuckets([noExpiry], now: now, days: 3);
 
-        final expired = result["expired"]!;
-        final expSoon = result["expSoon"]!;
+        final expired = result[AlertKeys.expired]!;
+        final expSoon = result[AlertKeys.expiringSoon]!;
 
         expect(expired, isEmpty);
         expect(expSoon, isEmpty);
@@ -142,9 +143,9 @@ void main() {
         days: 3,
       );
 
-      final low = result["low"]!;
-      final oos = result["outOfStock"]!;
-      final buy = result["toBuy"]!;
+      final low = result[AlertKeys.low]!;
+      final oos = result[AlertKeys.outOfStock]!;
+      final buy = result[AlertKeys.toBuy]!;
 
       expect(low, contains(lowStock));
       expect(low, isNot(contains(outOfStock)));
@@ -169,7 +170,7 @@ void main() {
       );
 
       final defaultResult = repo.buildAlertsBuckets([item], now: now, days: 3);
-      expect(defaultResult["low"], isEmpty);
+      expect(defaultResult[AlertKeys.low], isEmpty);
 
       final overriddenResult = repo.buildAlertsBuckets(
         [item],
@@ -177,7 +178,7 @@ void main() {
         days: 3,
         threshold: 10,
       );
-      expect(overriddenResult["low"], contains(item));
+      expect(overriddenResult[AlertKeys.low], contains(item));
     });
 
     test("handles empty list", () {
@@ -185,11 +186,11 @@ void main() {
 
       final result = repo.buildAlertsBuckets(const [], now: now, days: 3);
 
-      expect(result["low"], isEmpty);
-      expect(result["expSoon"], isEmpty);
-      expect(result["expired"], isEmpty);
-      expect(result["outOfStock"], isEmpty);
-      expect(result["toBuy"], isEmpty);
+      expect(result[AlertKeys.low], isEmpty);
+      expect(result[AlertKeys.expiringSoon], isEmpty);
+      expect(result[AlertKeys.expired], isEmpty);
+      expect(result[AlertKeys.outOfStock], isEmpty);
+      expect(result[AlertKeys.toBuy], isEmpty);
     });
   });
 }

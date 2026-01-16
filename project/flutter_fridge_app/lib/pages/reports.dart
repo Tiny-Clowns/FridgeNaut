@@ -1,7 +1,9 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/common/widgets/stat_card.dart";
+import "package:flutter_fridge_app/domain/reports/report_range.dart";
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -10,9 +12,8 @@ class ReportsPage extends ConsumerStatefulWidget {
 }
 
 class _ReportsPageState extends ConsumerState<ReportsPage> {
-  Map<String, num>? _weekly;
-  Map<String, num>? _monthly;
-  Map<String, num>? _annual;
+  Map<ReportRange, Map<String, num>> _reports =
+      <ReportRange, Map<String, num>>{};
   bool _loading = true;
   String? _err;
 
@@ -29,24 +30,35 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     });
     try {
       final repo = ref.read(repoProvider);
-      _weekly = await repo.reportLocal("weekly");
-      _monthly = await repo.reportLocal("monthly");
-      _annual = await repo.reportLocal("annual");
-    } catch (e) {
-      _err = e.toString();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
+      final data = <ReportRange, Map<String, num>>{};
+      for (final range in reportRanges) {
+        final result = await repo.reportLocal(range);
+        if (result is Success<Map<String, num>>) {
+          data[range] = result.value;
+        } else if (result is Failure<Map<String, num>>) {
+          throw Exception(result.message);
+        }
       }
+      if (!mounted) return;
+      setState(() {
+        _reports = data;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_err != null) return Center(child: Text("Error: $_err"));
+    if (_err != null) {
+      return _buildErrorView();
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Reports")),
@@ -56,10 +68,43 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
-            _card("Weekly", _weekly),
-            _card("Monthly", _monthly),
-            _card("Annual", _annual),
+            for (final range in reportRanges)
+              _card(range.label, _reports[range]),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Reports")),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                "Failed to load reports",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _err ?? "Unknown error",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh),
+                label: const Text("Retry"),
+              ),
+            ],
+          ),
         ),
       ),
     );

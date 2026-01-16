@@ -2,15 +2,21 @@ import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/models/item.dart";
-import "package:flutter_fridge_app/data/repository.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/home.dart";
+import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
-class FakeRepo extends Repo {
+import "../helpers/fake_repo.dart";
+
+/// A specialized FakeRepo for home tests with pre-configured alerts.
+class HomeTestFakeRepo extends FakeRepo {
+  HomeTestFakeRepo() : super();
+
   @override
-  Future<Map<String, List<Item>>> alertsLocal({
+  Future<Result<Map<String, List<Item>>>> alertsLocal({
     required int days,
     double? threshold,
   }) async {
@@ -31,13 +37,13 @@ class FakeRepo extends Repo {
       updatedAt: now,
     );
 
-    return {
-      "low": [mk("l1")], // 1
-      "expSoon": [mk("e1"), mk("e2")], // 2
-      "expired": [mk("x1"), mk("x2"), mk("x3")], // 3
-      "outOfStock": [mk("o1"), mk("o2"), mk("o3"), mk("o4")], // 4
-      "toBuy": [mk("b1"), mk("b2"), mk("b3"), mk("b4"), mk("b5")], // 5
-    };
+    return Success({
+      AlertKeys.low: [mk("l1")], // 1
+      AlertKeys.expiringSoon: [mk("e1"), mk("e2")], // 2
+      AlertKeys.expired: [mk("x1"), mk("x2"), mk("x3")], // 3
+      AlertKeys.outOfStock: [mk("o1"), mk("o2"), mk("o3"), mk("o4")], // 4
+      AlertKeys.toBuy: [mk("b1"), mk("b2"), mk("b3"), mk("b4"), mk("b5")], // 5
+    });
   }
 }
 
@@ -45,7 +51,7 @@ void main() {
   testWidgets("Home page displays alert counts from repo", (
     WidgetTester tester,
   ) async {
-    final fakeRepo = FakeRepo();
+    final fakeRepo = HomeTestFakeRepo();
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(

@@ -1,17 +1,13 @@
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "package:flutter_riverpod/legacy.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
-class PriceSymbolNotifier extends StateNotifier<AsyncValue<String>> {
-  PriceSymbolNotifier() : super(const AsyncValue.loading()) {
-    _load();
-  }
-
-  Future<void> _load() async {
+/// Modern AsyncNotifier for managing the price symbol setting.
+class PriceSymbolNotifier extends AsyncNotifier<String> {
+  @override
+  Future<String> build() async {
     final prefs = await SharedPreferences.getInstance();
-    final symbol = prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
-    state = AsyncValue.data(symbol);
+    return prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
   }
 
   Future<void> setSymbol(String symbol) async {
@@ -21,7 +17,6 @@ class PriceSymbolNotifier extends StateNotifier<AsyncValue<String>> {
   }
 }
 
-final priceSymbolProvider =
-    StateNotifierProvider<PriceSymbolNotifier, AsyncValue<String>>(
-      (ref) => PriceSymbolNotifier(),
-    );
+final priceSymbolProvider = AsyncNotifierProvider<PriceSymbolNotifier, String>(
+  PriceSymbolNotifier.new,
+);

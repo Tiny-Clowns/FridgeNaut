@@ -1,19 +1,20 @@
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/domain/inventory/inventory_event_type.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
-import "package:flutter_fridge_app/main.dart";
+import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/models/item.dart";
-import "package:flutter_fridge_app/models/inventory_event.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_list.dart";
+import "package:flutter_fridge_app/providers/item_service_provider.dart";
 
+import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
-  /// One of: "low", "expSoon", "expired", "outOfStock", or null.
+  /// One of: AlertKeys.low, AlertKeys.expiringSoon, AlertKeys.expired,
+  /// AlertKeys.outOfStock, or null.
   ///
   /// When null, the fridge opens on the "In stock" filter.
   final String? initialFilter;
@@ -25,38 +26,39 @@ class FridgePage extends ConsumerStatefulWidget {
 }
 
 class _FridgePageState extends ConsumerState<FridgePage> {
-  List<Item> _items = [];
-  bool _loading = true;
-  int _expirySoonDays = 3;
+  int _expirySoonDays = expirySoonDaysDefault;
 
   @override
   void initState() {
     super.initState();
-    _initSettingsAndLoad();
+    _loadSettings();
   }
 
-  Future<void> _initSettingsAndLoad() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _expirySoonDays = prefs.getInt("expiry_soon_days") ?? 3;
-    await _load();
-  }
-
-  Future<void> _load() async {
-    final repo = ref.read(repoProvider);
-    final items = await repo.allItems();
     if (!mounted) return;
     setState(() {
-      _items = items;
-      _loading = false;
+      _expirySoonDays = normaliseExpirySoonDays(
+        prefs.getInt(expirySoonDaysPrefKey),
+      );
     });
   }
-
-  String _genId() => DateTime.now().microsecondsSinceEpoch.toString();
 
   String _currencySymbolNow() {
     return ref
         .read(priceSymbolProvider)
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _addItem() async {
@@ -67,22 +69,10 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     );
     if (item == null) return;
 
-    await ref.read(repoProvider).upsertItem(item);
-
-    if (item.quantity != 0) {
-      final e = InventoryEvent(
-        id: _genId(),
-        itemId: item.id,
-        deltaQuantity: item.quantity,
-        unitPriceAtEvent: item.pricePerUnit,
-        type: InventoryEventType.purchase,
-        occurredAt: DateTime.now().toUtc(),
-        createdAt: DateTime.now().toUtc(),
-      );
-      await ref.read(repoProvider).addEvent(e);
+    final result = await ref.read(itemsNotifierProvider.notifier).addItem(item);
+    if (result is Failure) {
+      _showError(result.message);
     }
-
-    await _load();
   }
 
   Future<void> _editItem(Item old) async {
@@ -94,71 +84,91 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     );
     if (updated == null) return;
 
-    await ref.read(repoProvider).upsertItem(updated);
-
-    final delta = updated.quantity - old.quantity;
-    if (delta != 0) {
-      final e = InventoryEvent(
-        id: _genId(),
-        itemId: updated.id,
-        deltaQuantity: delta,
-        unitPriceAtEvent: updated.pricePerUnit,
-        type: delta > 0 ? InventoryEventType.adjust : InventoryEventType.use,
-        occurredAt: DateTime.now().toUtc(),
-        createdAt: DateTime.now().toUtc(),
-      );
-      await ref.read(repoProvider).addEvent(e);
+    final result = await ref
+        .read(itemsNotifierProvider.notifier)
+        .editItem(old, updated);
+    if (result is Failure) {
+      _showError(result.message);
     }
-
-    await _load();
   }
 
   Future<void> _adjust(Item it, double delta) async {
-    final e = InventoryEvent(
-      id: _genId(),
-      itemId: it.id,
-      deltaQuantity: delta,
-      unitPriceAtEvent: null,
-      type: delta > 0 ? InventoryEventType.adjust : InventoryEventType.use,
-      occurredAt: DateTime.now().toUtc(),
-      createdAt: DateTime.now().toUtc(),
-    );
-
-    await ref.read(repoProvider).applyEventLocally(e);
-    await _load();
+    final result = await ref
+        .read(itemsNotifierProvider.notifier)
+        .adjustQuantity(it, delta);
+    if (result is Failure) {
+      _showError(result.message);
+    }
   }
 
   Future<void> _deleteItem(Item it) async {
-    await ref.read(repoProvider).deleteItem(it.id);
-    await _load();
+    final result = await ref
+        .read(itemsNotifierProvider.notifier)
+        .deleteItem(it.id);
+    if (result is Failure) {
+      _showError(result.message);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
+    final itemsAsync = ref.watch(itemsNotifierProvider);
     final currencySymbol = ref
         .watch(priceSymbolProvider)
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Fridge")),
-      body: FridgeItemList(
-        items: _items,
-        expirySoonDays: _expirySoonDays,
-        currencySymbol: currencySymbol,
-        initialFilterKey: widget.initialFilter,
-        onRefresh: _load,
-        onEdit: _editItem,
-        onIncrement: (it) => _adjust(it, 1),
-        onDecrementOrDelete: (it) =>
-            it.quantity <= 0 ? _deleteItem(it) : _adjust(it, -1),
+      body: itemsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _buildErrorView(error),
+        data: (items) => FridgeItemList(
+          items: items,
+          expirySoonDays: _expirySoonDays,
+          currencySymbol: currencySymbol,
+          initialFilterKey: widget.initialFilter,
+          onRefresh: () => ref.read(itemsNotifierProvider.notifier).refresh(),
+          onEdit: _editItem,
+          onIncrement: (it) => _adjust(it, 1),
+          onDecrementOrDelete: (it) =>
+              it.quantity <= 0 ? _deleteItem(it) : _adjust(it, -1),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildErrorView(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              "Failed to load items",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () =>
+                  ref.read(itemsNotifierProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: const Text("Retry"),
+            ),
+          ],
+        ),
       ),
     );
   }
