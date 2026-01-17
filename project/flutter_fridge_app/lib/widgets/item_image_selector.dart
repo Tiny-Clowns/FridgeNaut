@@ -46,8 +46,8 @@ class _ItemImageSelectorState extends State<ItemImageSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage =
-        widget.imagePath != null && widget.imagePath!.trim().isNotEmpty;
+    final path = widget.imagePath ?? "";
+    final hasImage = path.trim().isNotEmpty;
 
     return Center(
       child: InkWell(
@@ -58,9 +58,7 @@ class _ItemImageSelectorState extends State<ItemImageSelector> {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundImage: hasImage
-                  ? FileImage(File(widget.imagePath!))
-                  : null,
+              backgroundImage: hasImage ? FileImage(File(path)) : null,
               child: hasImage ? null : const Icon(Icons.camera_alt),
             ),
             const SizedBox(height: 4),

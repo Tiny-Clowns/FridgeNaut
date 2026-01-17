@@ -31,8 +31,9 @@ ItemStatus calculateItemStatus(
 
   // ----- Expiry -----
   ExpiryStatus expiryStatus = ExpiryStatus.none;
-  if (item.expirationDate != null) {
-    final expDateOnly = dateOnlyLocal(item.expirationDate!);
+  final exp = item.expirationDate;
+  if (exp != null) {
+    final expDateOnly = dateOnlyLocal(exp);
 
     final daysDiff = expDateOnly.difference(today).inDays;
     if (daysDiff < 0) {
