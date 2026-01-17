@@ -226,7 +226,8 @@ class _ItemFormState extends State<ItemForm> {
   }
 
   void _handleSave() {
-    if (!_form.currentState!.validate()) return;
+    final valid = _form.currentState?.validate() ?? false;
+    if (!valid) return;
     final item = _buildItem();
     Navigator.pop(context, item);
   }
