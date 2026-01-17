@@ -276,7 +276,9 @@ class _SearchFilterListState<T> extends State<SearchFilterList<T>> {
             decoration: const InputDecoration(
               hintText: "Search",
               prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
               isDense: true,
             ),
           ),
