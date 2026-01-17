@@ -37,15 +37,16 @@ class FridgeItemTileData {
     required ItemStatus status,
     required String currencySymbol,
   }) {
+    final price = item.pricePerUnit;
+    final exp = item.expirationDate;
+
     return FridgeItemTileData(
       displayName: item.name.toCapitalisedWords(),
       quantityText: "${item.quantity} ${item.unit}",
-      priceText: item.pricePerUnit != null
-          ? "$currencySymbol${item.pricePerUnit!.toStringAsFixed(2)} / ${item.unit}"
+      priceText: price != null
+          ? "$currencySymbol${price.toStringAsFixed(2)} / ${item.unit}"
           : null,
-      expiryText: item.expirationDate != null
-          ? "exp ${formatLocalIsoDate(item.expirationDate!)}"
-          : null,
+      expiryText: exp != null ? "exp ${formatLocalIsoDate(exp)}" : null,
       isQuantityLow: status.isLow,
       isExpired: status.isExpired,
       isExpiringSoon: status.isExpiringSoon,
