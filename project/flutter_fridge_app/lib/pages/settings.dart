@@ -33,30 +33,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   String _priceSymbol = defaultPriceSymbol;
 
-  static const _weekdayNames = <String>[
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+  // static const _weekdayNames = <String>[
+  //   "Sunday",
+  //   "Monday",
+  //   "Tuesday",
+  //   "Wednesday",
+  //   "Thursday",
+  //   "Friday",
+  //   "Saturday",
+  // ];
 
-  static const _monthNames = <String>[
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  // static const _monthNames = <String>[
+  //   "January",
+  //   "February",
+  //   "March",
+  //   "April",
+  //   "May",
+  //   "June",
+  //   "July",
+  //   "August",
+  //   "September",
+  //   "October",
+  //   "November",
+  //   "December",
+  // ];
 
   @override
   void initState() {
@@ -70,12 +70,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     super.dispose();
   }
 
-  int _daysInMonth(int month) {
-    final year = DateTime.now().year;
-    final start = DateTime(year, month, 1);
-    final end = DateTime(year, month + 1, 1); // rolls over year automatically
-    return end.difference(start).inDays;
-  }
+  // int _daysInMonth(int month) {
+  //   final year = DateTime.now().year;
+  //   final start = DateTime(year, month, 1);
+  //   final end = DateTime(year, month + 1, 1); // rolls over year automatically
+  //   return end.difference(start).inDays;
+  // }
 
   Future<void> _load() async {
     setState(() {
@@ -125,129 +125,180 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ).showSnackBar(const SnackBar(content: Text("Saved")));
   }
 
+  Future<void> _reset() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Reset Settings"),
+          content: const Text(
+            "Are you sure you want to reset all settings to their default values? This action cannot be undone.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Reset"),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user didn't confirm, do nothing
+    if (confirmed != true) return;
+
+    // Reset to default values
+    setState(() {
+      _calendarSettings = const UserCalendarSettings.defaultValues();
+      _priceSymbol = defaultPriceSymbol;
+      _expirySoonDaysController.text = expirySoonDaysDefault.toString();
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+
+    // Save default calendar settings via service
+    await _calendarSettingsService.save(_calendarSettings);
+
+    // Save default expirySoonDays
+    await prefs.setInt(expirySoonDaysPrefKey, expirySoonDaysDefault);
+
+    // Save default price symbol
+    await ref.read(priceSymbolProvider.notifier).setSymbol(defaultPriceSymbol);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Settings reset to defaults")));
+  }
+
   // ---------------------------------------------------------------------------
   // UI building helpers
   // ---------------------------------------------------------------------------
 
-  Widget _buildCalendarSection(BuildContext context) {
-    final maxYearStartDay = _daysInMonth(_calendarSettings.yearStartMonth);
+  // Widget _buildCalendarSection(BuildContext context) {
+  //   final maxYearStartDay = _daysInMonth(_calendarSettings.yearStartMonth);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Calendar & reporting",
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         "Calendar & reporting",
+  //         style: Theme.of(context).textTheme.titleMedium,
+  //       ),
+  //       const SizedBox(height: 16),
 
-        // Week start day
-        DropdownButtonFormField<int>(
-          initialValue: _calendarSettings.weekStartDayIndex,
-          decoration: const InputDecoration(
-            labelText: "Week start day",
-            helperText: "Which day counts as the first day of the week.",
-          ),
-          items: List.generate(
-            _weekdayNames.length,
-            (i) => DropdownMenuItem(value: i, child: Text(_weekdayNames[i])),
-          ),
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() {
-              _calendarSettings = _calendarSettings.copyWith(
-                weekStartDayIndex: value,
-              );
-            });
-          },
-        ),
-        const SizedBox(height: 16),
+  //       // Week start day
+  //       DropdownButtonFormField<int>(
+  //         initialValue: _calendarSettings.weekStartDayIndex,
+  //         decoration: const InputDecoration(
+  //           labelText: "Week start day",
+  //           helperText: "Which day counts as the first day of the week.",
+  //         ),
+  //         items: List.generate(
+  //           _weekdayNames.length,
+  //           (i) => DropdownMenuItem(value: i, child: Text(_weekdayNames[i])),
+  //         ),
+  //         onChanged: (value) {
+  //           if (value == null) return;
+  //           setState(() {
+  //             _calendarSettings = _calendarSettings.copyWith(
+  //               weekStartDayIndex: value,
+  //             );
+  //           });
+  //         },
+  //       ),
+  //       const SizedBox(height: 16),
 
-        // Month start date
-        DropdownButtonFormField<int>(
-          initialValue: _calendarSettings.monthStartDay,
-          decoration: const InputDecoration(
-            labelText: "Month start date",
-            helperText: "Which calendar day counts as the start of a month.",
-          ),
-          items: List.generate(
-            31,
-            (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
-          ),
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() {
-              _calendarSettings = _calendarSettings.copyWith(
-                monthStartDay: value,
-              );
-            });
-          },
-        ),
-        const SizedBox(height: 16),
+  //       // Month start date
+  //       DropdownButtonFormField<int>(
+  //         initialValue: _calendarSettings.monthStartDay,
+  //         decoration: const InputDecoration(
+  //           labelText: "Month start date",
+  //           helperText: "Which calendar day counts as the start of a month.",
+  //         ),
+  //         items: List.generate(
+  //           31,
+  //           (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
+  //         ),
+  //         onChanged: (value) {
+  //           if (value == null) return;
+  //           setState(() {
+  //             _calendarSettings = _calendarSettings.copyWith(
+  //               monthStartDay: value,
+  //             );
+  //           });
+  //         },
+  //       ),
+  //       const SizedBox(height: 16),
 
-        // Year start: month + day
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: DropdownButtonFormField<int>(
-                initialValue: _calendarSettings.yearStartMonth,
-                decoration: const InputDecoration(
-                  labelText: "Year start month",
-                ),
-                items: List.generate(
-                  _monthNames.length,
-                  (i) => DropdownMenuItem(
-                    value: i + 1,
-                    child: Text(_monthNames[i]),
-                  ),
-                ),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() {
-                    final newMonth = value;
-                    final maxDay = _daysInMonth(newMonth);
-                    final newDay = _calendarSettings.yearStartDay > maxDay
-                        ? maxDay
-                        : _calendarSettings.yearStartDay;
+  //       // Year start: month + day
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             flex: 2,
+  //             child: DropdownButtonFormField<int>(
+  //               initialValue: _calendarSettings.yearStartMonth,
+  //               decoration: const InputDecoration(
+  //                 labelText: "Year start month",
+  //               ),
+  //               items: List.generate(
+  //                 _monthNames.length,
+  //                 (i) => DropdownMenuItem(
+  //                   value: i + 1,
+  //                   child: Text(_monthNames[i]),
+  //                 ),
+  //               ),
+  //               onChanged: (value) {
+  //                 if (value == null) return;
+  //                 setState(() {
+  //                   final newMonth = value;
+  //                   final maxDay = _daysInMonth(newMonth);
+  //                   final newDay = _calendarSettings.yearStartDay > maxDay
+  //                       ? maxDay
+  //                       : _calendarSettings.yearStartDay;
 
-                    _calendarSettings = _calendarSettings.copyWith(
-                      yearStartMonth: newMonth,
-                      yearStartDay: newDay,
-                    );
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 1,
-              child: DropdownButtonFormField<int>(
-                initialValue: _calendarSettings.yearStartDay.clamp(
-                  1,
-                  maxYearStartDay,
-                ),
-                decoration: const InputDecoration(labelText: "Day"),
-                items: List.generate(
-                  maxYearStartDay,
-                  (i) =>
-                      DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
-                ),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() {
-                    _calendarSettings = _calendarSettings.copyWith(
-                      yearStartDay: value,
-                    );
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  //                   _calendarSettings = _calendarSettings.copyWith(
+  //                     yearStartMonth: newMonth,
+  //                     yearStartDay: newDay,
+  //                   );
+  //                 });
+  //               },
+  //             ),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           Expanded(
+  //             flex: 1,
+  //             child: DropdownButtonFormField<int>(
+  //               initialValue: _calendarSettings.yearStartDay.clamp(
+  //                 1,
+  //                 maxYearStartDay,
+  //               ),
+  //               decoration: const InputDecoration(labelText: "Day"),
+  //               items: List.generate(
+  //                 maxYearStartDay,
+  //                 (i) =>
+  //                     DropdownMenuItem(value: i + 1, child: Text("${i + 1}")),
+  //               ),
+  //               onChanged: (value) {
+  //                 if (value == null) return;
+  //                 setState(() {
+  //                   _calendarSettings = _calendarSettings.copyWith(
+  //                     yearStartDay: value,
+  //                   );
+  //                 });
+  //               },
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildPriceSection(BuildContext context) {
     return Column(
@@ -323,24 +374,62 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Settings")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            const SizedBox(height: 16),
-            _buildCalendarSection(context),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            _buildPriceSection(context),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            _buildExpirySoonSection(context),
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: _save, child: const Text("Save")),
-          ],
-        ),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+            child: ListView(
+              children: [
+                const SizedBox(height: 16),
+                // Calendar & reporting section - hidden for first release
+                // Uncomment for second version:
+                // _buildCalendarSection(context),
+                // const SizedBox(height: 24),
+                // const Divider(),
+                // const SizedBox(height: 16),
+                _buildPriceSection(context),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildExpirySoonSection(context),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+          // Bottom buttons: Reset (left) and Save (right)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Reset button (bottom left)
+                ElevatedButton.icon(
+                  onPressed: _reset,
+                  icon: const Icon(Icons.restore, size: 18),
+                  label: const Text("Reset"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black87,
+                  ),
+                ),
+                // Save button (bottom right)
+                ElevatedButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.save, size: 18),
+                  label: const Text("Save"),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
