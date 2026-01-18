@@ -8,7 +8,9 @@ import "package:flutter_fridge_app/services/user_calendar_settings_service.dart"
 
 import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+import "package:flutter_fridge_app/domain/settings/theme_settings.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
+import "package:flutter_fridge_app/providers/theme_provider.dart";
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -32,6 +34,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       const UserCalendarSettings.defaultValues();
 
   String _priceSymbol = defaultPriceSymbol;
+  AppThemeMode _themeMode = defaultThemeMode;
 
   // static const _weekdayNames = <String>[
   //   "Sunday",
@@ -91,10 +94,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final priceSymbol =
         prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
 
+    // Load theme mode
+    final themeModeString = prefs.getString(themePrefKey);
+    final themeMode = themeModeString != null
+        ? AppThemeMode.values.firstWhere(
+            (e) => e.name == themeModeString,
+            orElse: () => defaultThemeMode,
+          )
+        : defaultThemeMode;
+
     setState(() {
       _calendarSettings = calendar;
       _expirySoonDaysController.text = expirySoonDays.toString();
       _priceSymbol = priceSymbol;
+      _themeMode = themeMode;
       _loading = false;
     });
   }
@@ -114,6 +127,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save price symbol (and notify the whole app via provider)
     await ref.read(priceSymbolProvider.notifier).setSymbol(_priceSymbol);
+
+    // Save theme mode (and notify the whole app via provider)
+    await ref.read(themeModeProvider.notifier).setThemeMode(_themeMode);
 
     if (_expirySoonDaysController.text.isEmpty) {
       _expirySoonDaysController.text = expirySoonDays.toString();
@@ -156,6 +172,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     setState(() {
       _calendarSettings = const UserCalendarSettings.defaultValues();
       _priceSymbol = defaultPriceSymbol;
+      _themeMode = defaultThemeMode;
       _expirySoonDaysController.text = expirySoonDaysDefault.toString();
     });
 
@@ -169,6 +186,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save default price symbol
     await ref.read(priceSymbolProvider.notifier).setSymbol(defaultPriceSymbol);
+
+    // Save default theme mode
+    await ref.read(themeModeProvider.notifier).setThemeMode(defaultThemeMode);
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -300,6 +320,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   //   );
   // }
 
+  Widget _buildThemeSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Appearance", style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<AppThemeMode>(
+          initialValue: _themeMode,
+          decoration: const InputDecoration(
+            labelText: "Theme",
+            helperText: "Choose the app's color theme.",
+          ),
+          items: AppThemeMode.values
+              .map(
+                (mode) => DropdownMenuItem<AppThemeMode>(
+                  value: mode,
+                  child: Text(mode.label),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _themeMode = value);
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildPriceSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,6 +436,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 // const SizedBox(height: 24),
                 // const Divider(),
                 // const SizedBox(height: 16),
+                _buildThemeSection(context),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
                 _buildPriceSection(context),
                 const SizedBox(height: 24),
                 const Divider(),

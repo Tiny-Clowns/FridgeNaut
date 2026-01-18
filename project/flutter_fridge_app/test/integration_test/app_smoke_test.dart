@@ -13,7 +13,7 @@ import "../helpers/fake_repo.dart";
 
 void main() {
   testWidgets("App navigates between tabs", (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({"theme_mode": "system"});
 
     await tester.pumpWidget(
       ProviderScope(

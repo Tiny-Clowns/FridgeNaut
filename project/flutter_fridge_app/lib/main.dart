@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "package:flutter_fridge_app/data/repository.dart";
+import "package:flutter_fridge_app/providers/theme_provider.dart";
 import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
@@ -17,19 +18,20 @@ void main() {
   runApp(const ProviderScope(child: App()));
 }
 
-class App extends StatefulWidget {
+class App extends ConsumerWidget {
   const App({super.key});
 
   @override
-  State<App> createState() => _AppState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref
+        .watch(themeModeProvider)
+        .maybeWhen(data: (m) => m, orElse: () => ThemeMode.light);
 
-class _AppState extends State<App> {
-  @override
-  Widget build(BuildContext context) {
     return MaterialApp(
       title: "FridgeNaut",
-      theme: ThemeData(useMaterial3: true),
+      theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
+      darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       home: const Shell(),
     );
