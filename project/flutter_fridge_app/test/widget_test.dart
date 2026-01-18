@@ -13,7 +13,7 @@ void main() {
   testWidgets("App smoke test builds with navigation bar", (
     WidgetTester tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({"theme_mode": "system"});
 
     // Mirror main(): App inside ProviderScope with FakeRepo
     await tester.pumpWidget(
