@@ -87,28 +87,37 @@ class FridgeItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return ListTile(
       leading: data.leadingImage,
       title: Text(
         data.displayName,
-        style: const TextStyle(color: Colors.black, fontSize: 18),
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: theme.brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+          fontSize: 18,
+        ),
       ),
       titleAlignment: ListTileTitleAlignment.top,
-      subtitle: _buildSubtitle(),
+      subtitle: _buildSubtitle(context, theme),
       onTap: onTap,
-      trailing: _buildActions(),
+      trailing: _buildActions(theme),
     );
   }
 
-  Widget _buildSubtitle() {
+  Widget _buildSubtitle(BuildContext context, ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final defaultStyle = theme.textTheme.bodyMedium;
+
     return Text.rich(
       TextSpan(
+        style: defaultStyle?.copyWith(color: colorScheme.onSurface),
         children: [
           TextSpan(
             text: data.quantityText,
-            style: data.isQuantityLow
-                ? const TextStyle(color: Colors.red)
-                : null,
+            style: data.isQuantityLow ? TextStyle(color: Colors.red) : null,
           ),
           if (data.priceText != null) ...[
             const TextSpan(text: " | "),
@@ -130,7 +139,7 @@ class FridgeItemTile extends StatelessWidget {
     );
   }
 
-  Widget _buildActions() {
+  Widget _buildActions(ThemeData theme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

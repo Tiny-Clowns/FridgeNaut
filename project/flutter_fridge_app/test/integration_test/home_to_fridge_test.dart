@@ -30,7 +30,7 @@ void main() {
   testWidgets("Home low-stock card opens fridge with low filter", (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({"theme_mode": "system"});
 
     final now = DateTime.utc(2025, 1, 1);
     final items = <Item>[
