@@ -62,10 +62,12 @@ class _FridgePageState extends ConsumerState<FridgePage> {
   }
 
   Future<void> _addItem() async {
+    final items = ref.read(itemsNotifierProvider).asData?.value ?? [];
     final Item? item = await showModalBottomSheet<Item>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => ItemForm(currencySymbol: _currencySymbolNow()),
+      builder: (_) =>
+          ItemForm(currencySymbol: _currencySymbolNow(), allItems: items),
     );
     if (item == null) return;
 
@@ -76,11 +78,15 @@ class _FridgePageState extends ConsumerState<FridgePage> {
   }
 
   Future<void> _editItem(Item old) async {
+    final items = ref.read(itemsNotifierProvider).asData?.value ?? [];
     final Item? updated = await showModalBottomSheet<Item>(
       context: context,
       isScrollControlled: true,
-      builder: (_) =>
-          ItemForm(existing: old, currencySymbol: _currencySymbolNow()),
+      builder: (_) => ItemForm(
+        existing: old,
+        currencySymbol: _currencySymbolNow(),
+        allItems: items,
+      ),
     );
     if (updated == null) return;
 
