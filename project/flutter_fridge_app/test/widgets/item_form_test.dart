@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
+import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 
 Future<void> _pumpItemForm(WidgetTester tester) async {
@@ -162,5 +163,134 @@ void main() {
     expect(valid, isTrue);
     expect(find.text("Min 0"), findsNothing);
     expect(find.text("Required"), findsNothing);
+  });
+
+  testWidgets("Shows duplicate warning when name already exists", (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final existingItems = [
+      Item(
+        id: "1",
+        name: "Milk",
+        quantity: 1,
+        unit: "pcs",
+        expirationDate: null,
+        pricePerUnit: null,
+        toBuy: false,
+        notifyOnLow: true,
+        notifyOnExpire: true,
+        lowThreshold: 1,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ItemForm(allItems: existingItems)),
+      ),
+    );
+
+    // Enter a duplicate name
+    await tester.enterText(find.widgetWithText(TextFormField, "Name"), "Milk");
+    await tester.pump();
+
+    // Verify warning message is shown
+    expect(
+      find.text(
+        "This name already exists, but you can still create a new one with the same name.",
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets("No duplicate warning when editing existing item", (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final existingItem = Item(
+      id: "1",
+      name: "Milk",
+      quantity: 1,
+      unit: "pcs",
+      expirationDate: null,
+      pricePerUnit: null,
+      toBuy: false,
+      notifyOnLow: true,
+      notifyOnExpire: true,
+      lowThreshold: 1,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ItemForm(existing: existingItem, allItems: [existingItem]),
+        ),
+      ),
+    );
+
+    // The name field should have "Milk" and no warning should show
+    expect(find.text("Milk"), findsOneWidget);
+    expect(
+      find.text(
+        "This name already exists, but you can still create a new one with the same name.",
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets("Duplicate warning disappears when name is changed", (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final existingItems = [
+      Item(
+        id: "1",
+        name: "Milk",
+        quantity: 1,
+        unit: "pcs",
+        expirationDate: null,
+        pricePerUnit: null,
+        toBuy: false,
+        notifyOnLow: true,
+        notifyOnExpire: true,
+        lowThreshold: 1,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ItemForm(allItems: existingItems)),
+      ),
+    );
+
+    // Enter a duplicate name
+    await tester.enterText(find.widgetWithText(TextFormField, "Name"), "Milk");
+    await tester.pump();
+
+    // Verify warning is shown
+    expect(
+      find.text(
+        "This name already exists, but you can still create a new one with the same name.",
+      ),
+      findsOneWidget,
+    );
+
+    // Change to a unique name
+    await tester.enterText(find.widgetWithText(TextFormField, "Name"), "Bread");
+    await tester.pump();
+
+    // Verify warning is gone
+    expect(
+      find.text(
+        "This name already exists, but you can still create a new one with the same name.",
+      ),
+      findsNothing,
+    );
   });
 }

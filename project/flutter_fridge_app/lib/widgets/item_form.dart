@@ -54,11 +54,13 @@ class _ItemFormSnapshot {
 class ItemForm extends StatefulWidget {
   final Item? existing;
   final String currencySymbol;
+  final List<Item>? allItems;
 
   const ItemForm({
     super.key,
     this.existing,
     this.currencySymbol = defaultPriceSymbol,
+    this.allItems,
   });
 
   @override
@@ -85,6 +87,7 @@ class _ItemFormState extends State<ItemForm> {
   bool _notifyOnLow = true;
   bool _notifyOnExpire = true;
   String? _imagePath;
+  bool _isDuplicateName = false;
 
   late final _ItemFormSnapshot _initialSnapshot;
 
@@ -115,10 +118,14 @@ class _ItemFormState extends State<ItemForm> {
     _imagePath = it?.imagePath;
 
     _initialSnapshot = _createSnapshot();
+
+    // Listen for name changes to check for duplicates
+    _nameController.addListener(_checkForDuplicateName);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_checkForDuplicateName);
     _nameController.dispose();
     _unitController.dispose();
     _quantityController.dispose();
@@ -143,6 +150,35 @@ class _ItemFormState extends State<ItemForm> {
   }
 
   bool _hasChanges() => !_initialSnapshot.isSameAs(_createSnapshot());
+
+  void _checkForDuplicateName() {
+    final items = widget.allItems;
+    if (items == null || items.isEmpty) {
+      if (_isDuplicateName) {
+        setState(() => _isDuplicateName = false);
+      }
+      return;
+    }
+
+    final currentName = _nameController.text.trim().toLowerCase();
+    if (currentName.isEmpty) {
+      if (_isDuplicateName) {
+        setState(() => _isDuplicateName = false);
+      }
+      return;
+    }
+
+    final existingId = widget.existing?.id;
+    final isDuplicate = items.any(
+      (item) =>
+          item.id != existingId &&
+          item.name.trim().toLowerCase() == currentName,
+    );
+
+    if (isDuplicate != _isDuplicateName) {
+      setState(() => _isDuplicateName = isDuplicate);
+    }
+  }
 
   String? _validateRequiredText(String? v) {
     if (v == null || v.trim().isEmpty) return "Required";
@@ -269,10 +305,23 @@ class _ItemFormState extends State<ItemForm> {
   }
 
   Widget _buildNameField() {
-    return _buildTextField(
-      controller: _nameController,
-      label: "Name",
-      validator: _validateRequiredText,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTextField(
+          controller: _nameController,
+          label: "Name",
+          validator: _validateRequiredText,
+        ),
+        if (_isDuplicateName)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 12, right: 12),
+            child: Text(
+              "This name already exists, but you can still create a new one with the same name.",
+              style: TextStyle(color: Colors.yellow.shade700, fontSize: 12),
+            ),
+          ),
+      ],
     );
   }
 
