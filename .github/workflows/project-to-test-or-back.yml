@@ -152,6 +152,16 @@ jobs:
               prSet.add(parseInt(m[1],10));
             }
 
+            // Get all commits in PRs to check their messages too
+            async function addAllCommitsFromPR(prNumber){
+              const commits = await github.paginate(
+                github.rest.pulls.listCommits,
+                { owner, repo, pull_number: prNumber, per_page: 100 }
+              );
+              const messages = commits.map(c => c.commit.message || "").join("\n");
+              return messages;
+            }
+
             async function addClosingIssues(prNumber){
               const q = await github.graphql(`query($o:String!,$r:String!,$p:Int!){
                 repository(owner:$o,name:$r){
@@ -169,12 +179,13 @@ jobs:
               }
             }
 
-            async function addIssuesFromMessage(){
+            async function addIssuesFromMessage(message){
               const nums = new Set();
-              for (const m of msg.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/ig)) {
+              for (const m of message.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/ig)) {
                 nums.add(parseInt(m[1],10));
               }
-              for (const m of msg.matchAll(/#(\d{1,7})/g)) {
+              // Also check for simple #123 patterns
+              for (const m of message.matchAll(/#(\d{1,7})/g)) {
                 nums.add(parseInt(m[1],10));
               }
               for (const n of nums) {
@@ -189,9 +200,18 @@ jobs:
               }
             }
 
-            for (const pr of prSet) await addClosingIssues(pr);
-            if (!issueIds.size) await addIssuesFromMessage();
+            // Process closing issues from PRs
+            for (const pr of prSet) {
+              await addClosingIssues(pr);
+              // Also get all commit messages from the PR
+              const prMessages = await addAllCommitsFromPR(pr);
+              await addIssuesFromMessage(prMessages);
+            }
 
+            // Always also check the commit message itself
+            await addIssuesFromMessage(msg);
+
+            core.info(`Found ${issueIds.size} issue(s) to update`);
             core.setOutput("issueIds", JSON.stringify([...issueIds]));
 
       - name: Move issues to To Test / To Fix
