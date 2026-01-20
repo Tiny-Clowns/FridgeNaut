@@ -2,12 +2,12 @@ import "package:flutter_test/flutter_test.dart";
 import "package:flutter_fridge_app/domain/reports/report_range.dart";
 
 void main() {
-  test("ReportRange labels and start dates are consistent", () {
+  test("ReportRange keys and start dates are consistent", () {
     final now = DateTime.utc(2025, 6, 15, 10, 30);
 
-    expect(ReportRange.weekly.label, "Weekly");
-    expect(ReportRange.monthly.label, "Monthly");
-    expect(ReportRange.annual.label, "Annual");
+    expect(ReportRange.weekly.key, "weekly");
+    expect(ReportRange.monthly.key, "monthly");
+    expect(ReportRange.annual.key, "annual");
 
     expect(
       ReportRange.weekly.startFromUtc(now),

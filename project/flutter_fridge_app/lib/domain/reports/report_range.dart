@@ -7,14 +7,14 @@ const List<ReportRange> reportRanges = <ReportRange>[
 ];
 
 extension ReportRangeX on ReportRange {
-  String get label {
+  String get key {
     switch (this) {
       case ReportRange.weekly:
-        return "Weekly";
+        return "weekly";
       case ReportRange.monthly:
-        return "Monthly";
+        return "monthly";
       case ReportRange.annual:
-        return "Annual";
+        return "annual";
     }
   }
 

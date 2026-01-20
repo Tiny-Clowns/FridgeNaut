@@ -3,6 +3,7 @@ import "dart:io";
 
 import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
 class ItemImageSelector extends StatefulWidget {
   final String? imagePath;
@@ -46,6 +47,7 @@ class _ItemImageSelectorState extends State<ItemImageSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final path = widget.imagePath ?? "";
     final hasImage = path.trim().isNotEmpty;
 
@@ -63,7 +65,7 @@ class _ItemImageSelectorState extends State<ItemImageSelector> {
             ),
             const SizedBox(height: 4),
             Text(
-              hasImage ? "Change picture" : "Add picture",
+              hasImage ? l10n.changePicture : l10n.addPicture,
               style: const TextStyle(fontSize: 12),
             ),
           ],

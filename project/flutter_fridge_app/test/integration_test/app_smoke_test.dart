@@ -37,4 +37,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsOneWidget);
   });
+
+  testWidgets("Changing language shows localized Saved snackbar", (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({"theme_mode": "system"});
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [repoProvider.overrideWithValue(FakeRepo())],
+        child: const App(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Open Settings tab
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPage), findsOneWidget);
+
+    // Open language dropdown (initially shows System Default)
+    final systemText = find.text('System Default');
+    expect(systemText, findsOneWidget);
+    await tester.tap(systemText);
+    await tester.pumpAndSettle();
+
+    // Select French (native name shown in parentheses)
+    final frenchOption = find.text('French (Français)');
+    expect(frenchOption, findsOneWidget);
+    await tester.tap(frenchOption);
+    await tester.pumpAndSettle();
+
+    // Tap Save (find by icon to be localization-robust) and wait for the deferred SnackBar
+    final saveIcon = find.byIcon(Icons.save);
+    expect(saveIcon, findsOneWidget);
+    await tester.tap(saveIcon);
+    await tester.pumpAndSettle();
+
+    // The snack bar should display the localized "Saved" in French
+    expect(find.text('Enregistré'), findsOneWidget);
+  });
 }

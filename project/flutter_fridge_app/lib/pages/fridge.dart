@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
 import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/models/item.dart";
@@ -118,16 +119,17 @@ class _FridgePageState extends ConsumerState<FridgePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final itemsAsync = ref.watch(itemsNotifierProvider);
     final currencySymbol = ref
         .watch(priceSymbolProvider)
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Fridge")),
+      appBar: AppBar(title: Text(l10n.fridge)),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorView(error),
+        error: (error, stack) => _buildErrorView(error, l10n),
         data: (items) => FridgeItemList(
           items: items,
           expirySoonDays: _expirySoonDays,
@@ -147,7 +149,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     );
   }
 
-  Widget _buildErrorView(Object error) {
+  Widget _buildErrorView(Object error, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -157,7 +159,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              "Failed to load items",
+              l10n.failedToLoadItems,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -171,7 +173,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
               onPressed: () =>
                   ref.read(itemsNotifierProvider.notifier).refresh(),
               icon: const Icon(Icons.refresh),
-              label: const Text("Retry"),
+              label: Text(l10n.retry),
             ),
           ],
         ),

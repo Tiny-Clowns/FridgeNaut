@@ -1,10 +1,12 @@
 import "package:flutter/material.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 
 import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/domain/reports/report_range.dart";
 import "package:flutter_fridge_app/main.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/pages/reports.dart";
 
 import "../helpers/fake_repo.dart";
@@ -31,7 +33,16 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [repoProvider.overrideWithValue(ReportsTestFakeRepo())],
-        child: const MaterialApp(home: ReportsPage()),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReportsPage(),
+        ),
       ),
     );
 

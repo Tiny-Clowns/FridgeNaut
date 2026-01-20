@@ -45,6 +45,9 @@ class SearchFilterList<T> extends StatefulWidget {
   /// Optional predicate for the "All" chip. If null, all items are shown.
   final bool Function(T item)? allPredicate;
 
+  /// Hint text for the search field.
+  final String searchHint;
+
   const SearchFilterList({
     super.key,
     required this.items,
@@ -57,6 +60,7 @@ class SearchFilterList<T> extends StatefulWidget {
     this.allLabel = "All",
     this.allFilterFirst = true,
     this.allPredicate,
+    this.searchHint = "Search",
   });
 
   @override
@@ -273,10 +277,10 @@ class _SearchFilterListState<T> extends State<SearchFilterList<T>> {
         children: [
           TextField(
             controller: _searchController,
-            decoration: const InputDecoration(
-              hintText: "Search",
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(
+            decoration: InputDecoration(
+              hintText: widget.searchHint,
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(16)),
               ),
               isDense: true,
