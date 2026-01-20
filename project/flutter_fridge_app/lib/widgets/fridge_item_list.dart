@@ -3,6 +3,7 @@ import "package:flutter_fridge_app/common/widgets/search_filter_list.dart";
 import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:flutter_fridge_app/domain/inventory/fridge_filters.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_tile.dart";
 
@@ -73,7 +74,21 @@ class FridgeItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filters = buildFridgeFilters(expirySoonDays: expirySoonDays);
+    final l10n = AppLocalizations.of(context)!;
+
+    // Create localized filter labels
+    final filterLabels = FridgeFilterLabels(
+      inStock: l10n.inStock,
+      lowStock: l10n.lowStock,
+      expiringSoon: l10n.expiringSoon,
+      expired: l10n.expired,
+      outOfStock: l10n.outOfStock,
+    );
+
+    final filters = buildFridgeFilters(
+      expirySoonDays: expirySoonDays,
+      labels: filterLabels,
+    );
 
     return SearchFilterList<Item>(
       items: items,
@@ -84,8 +99,9 @@ class FridgeItemList extends StatelessWidget {
       itemBuilder: _buildTile,
       // Fridge-specific: we want "In stock" first, and "All" as the last chip.
       showAllFilter: true,
-      allLabel: "All",
+      allLabel: l10n.all,
       allFilterFirst: false,
+      searchHint: l10n.searchPlaceholder,
       // allPredicate: null -> All items, regardless of filter.
     );
   }

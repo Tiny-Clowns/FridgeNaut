@@ -1,9 +1,11 @@
 import "package:flutter/material.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 import "package:flutter_fridge_app/main.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
@@ -16,7 +18,16 @@ Future<void> _pumpFridgePage(WidgetTester tester, FakeRepo repo) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [repoProvider.overrideWithValue(repo)],
-      child: const MaterialApp(home: FridgePage()),
+      child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const FridgePage(),
+      ),
     ),
   );
 

@@ -1,0 +1,391 @@
+{
+  "@@locale": "en",
+  "appTitle": "FridgeNaut",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation label"
+  },
+  "fridge": "Fridge",
+  "@fridge": {
+    "description": "Fridge navigation label"
+  },
+  "reports": "Reports",
+  "@reports": {
+    "description": "Reports navigation label"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings navigation label"
+  },
+  "lowStock": "Low stock",
+  "@lowStock": {
+    "description": "Low stock alert label"
+  },
+  "expiringSoon": "Expiring soon",
+  "@expiringSoon": {
+    "description": "Expiring soon alert label"
+  },
+  "expired": "Expired",
+  "@expired": {
+    "description": "Expired alert label"
+  },
+  "outOfStock": "Out of stock",
+  "@outOfStock": {
+    "description": "Out of stock alert label"
+  },
+  "plannedToBuy": "Planned to buy",
+  "@plannedToBuy": {
+    "description": "Planned to buy alert label"
+  },
+  "failedToLoadAlerts": "Failed to load alerts",
+  "@failedToLoadAlerts": {
+    "description": "Error message when alerts fail to load"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button label"
+  },
+  "failedToLoadReports": "Failed to load reports",
+  "@failedToLoadReports": {
+    "description": "Error message when reports fail to load"
+  },
+  "cost": "Cost: {amount}",
+  "@cost": {
+    "description": "Cost label with amount",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "12.34"
+      }
+    }
+  },
+  "thisWeek": "This Week",
+  "@thisWeek": {
+    "description": "This week report range"
+  },
+  "thisMonth": "This Month",
+  "@thisMonth": {
+    "description": "This month report range"
+  },
+  "thisYear": "This Year",
+  "@thisYear": {
+    "description": "This year report range"
+  },
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Appearance section title"
+  },
+  "theme": "Theme",
+  "@theme": {
+    "description": "Theme setting label"
+  },
+  "themeHelperText": "Choose the app's color theme.",
+  "@themeHelperText": {
+    "description": "Theme setting helper text"
+  },
+  "themeSystem": "System",
+  "@themeSystem": {
+    "description": "System theme option"
+  },
+  "themeLight": "Light",
+  "@themeLight": {
+    "description": "Light theme option"
+  },
+  "themeDark": "Dark",
+  "@themeDark": {
+    "description": "Dark theme option"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language section title"
+  },
+  "languageLabel": "App Language",
+  "@languageLabel": {
+    "description": "Language setting label"
+  },
+  "languageHelperText": "Choose the app's display language.",
+  "@languageHelperText": {
+    "description": "Language setting helper text"
+  },
+  "languageSystem": "System Default",
+  "@languageSystem": {
+    "description": "System default language option"
+  },
+  "currentlyUsing": "currently using",
+  "@currentlyUsing": {
+    "description": "Text shown to indicate the active locale when system default is selected"
+  },
+  "prices": "Prices",
+  "@prices": {
+    "description": "Prices section title"
+  },
+  "priceSymbol": "Price symbol",
+  "@priceSymbol": {
+    "description": "Price symbol setting label"
+  },
+  "priceSymbolHelperText": "Used when displaying prices (e.g. £12.34).",
+  "@priceSymbolHelperText": {
+    "description": "Price symbol setting helper text"
+  },
+  "extra": "Extra :)",
+  "@extra": {
+    "description": "Extra section title"
+  },
+  "expirySoonDays": "Expiry Soon Days",
+  "@expirySoonDays": {
+    "description": "Expiry soon days setting label"
+  },
+  "expirySoonDaysHelperText": "Between {min} and {max}. Default is {defaultValue}.",
+  "@expirySoonDaysHelperText": {
+    "description": "Expiry soon days setting helper text",
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "1"
+      },
+      "max": {
+        "type": "int",
+        "example": "30"
+      },
+      "defaultValue": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "expiryAbbrev": "exp",
+  "@expiryAbbrev": {
+    "description": "Abbreviation shown before expiry dates (e.g. 'exp 2025-12-25')"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button label"
+  },
+  "reset": "Reset",
+  "@reset": {
+    "description": "Reset button label"
+  },
+  "saved": "Saved",
+  "@saved": {
+    "description": "Saved confirmation message"
+  },
+  "resetSettings": "Reset Settings",
+  "@resetSettings": {
+    "description": "Reset settings dialog title"
+  },
+  "resetSettingsConfirmation": "Are you sure you want to reset all settings to their default values? This action cannot be undone.",
+  "@resetSettingsConfirmation": {
+    "description": "Reset settings confirmation message"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+  "settingsResetToDefaults": "Settings reset to defaults",
+  "@settingsResetToDefaults": {
+    "description": "Settings reset confirmation message"
+  },
+  "inStock": "In stock",
+  "@inStock": {
+    "description": "In stock filter label"
+  },
+  "all": "All",
+  "@all": {
+    "description": "All filter label"
+  },
+  "addItem": "Add Item",
+  "@addItem": {
+    "description": "Add item button/title"
+  },
+  "editItem": "Edit Item",
+  "@editItem": {
+    "description": "Edit item button/title"
+  },
+  "name": "Name",
+  "@name": {
+    "description": "Name field label"
+  },
+  "quantity": "Quantity",
+  "@quantity": {
+    "description": "Quantity field label"
+  },
+  "unit": "Unit",
+  "@unit": {
+    "description": "Unit field label"
+  },
+  "price": "Price",
+  "@price": {
+    "description": "Price field label"
+  },
+  "expiryDate": "Expiry Date",
+  "@expiryDate": {
+    "description": "Expiry date field label"
+  },
+  "lowStockThreshold": "Low Stock Threshold",
+  "@lowStockThreshold": {
+    "description": "Low stock threshold field label"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button label"
+  },
+  "confirmDelete": "Confirm Delete",
+  "@confirmDelete": {
+    "description": "Confirm delete dialog title"
+  },
+  "confirmDeleteMessage": "Are you sure you want to delete this item?",
+  "@confirmDeleteMessage": {
+    "description": "Confirm delete dialog message"
+  },
+  "noItems": "No items found",
+  "@noItems": {
+    "description": "No items message"
+  },
+  "failedToLoadItems": "Failed to load items",
+  "@failedToLoadItems": {
+    "description": "Error message when items fail to load"
+  },
+  "searchItems": "Search items...",
+  "@searchItems": {
+    "description": "Search items placeholder"
+  },
+  "category": "Category",
+  "@category": {
+    "description": "Category field label"
+  },
+  "notes": "Notes",
+  "@notes": {
+    "description": "Notes field label"
+  },
+  "toBuy": "To Buy",
+  "@toBuy": {
+    "description": "To buy checkbox label"
+  },
+  "pricePerUnit": "Price per unit",
+  "@pricePerUnit": {
+    "description": "Price per unit field label"
+  },
+  "lowThreshold": "Low threshold",
+  "@lowThreshold": {
+    "description": "Low threshold field label"
+  },
+  "expirationDate": "Expiration date",
+  "@expirationDate": {
+    "description": "Expiration date field label"
+  },
+  "none": "None",
+  "@none": {
+    "description": "None label for empty values"
+  },
+  "notifyOnLow": "Notify on low",
+  "@notifyOnLow": {
+    "description": "Notify on low stock switch label"
+  },
+  "notifyOnExpire": "Notify on expire",
+  "@notifyOnExpire": {
+    "description": "Notify on expire switch label"
+  },
+  "required": "Required",
+  "@required": {
+    "description": "Required field validation message"
+  },
+  "invalidNumber": "Number",
+  "@invalidNumber": {
+    "description": "Invalid number validation message"
+  },
+  "minZero": "Min 0",
+  "@minZero": {
+    "description": "Minimum zero validation message"
+  },
+  "duplicateNameWarning": "This name already exists, but you can still create a new one with the same name.",
+  "@duplicateNameWarning": {
+    "description": "Duplicate name warning message"
+  },
+  "pastExpiryNote": "Note: this expiration date is in the past.",
+  "@pastExpiryNote": {
+    "description": "Past expiry date note"
+  },
+  "discardChanges": "Discard changes?",
+  "@discardChanges": {
+    "description": "Discard changes dialog title"
+  },
+  "discardChangesMessage": "You have unsaved changes. Do you want to discard them?",
+  "@discardChangesMessage": {
+    "description": "Discard changes dialog message"
+  },
+  "keepEditing": "Keep editing",
+  "@keepEditing": {
+    "description": "Keep editing button label"
+  },
+  "discard": "Discard",
+  "@discard": {
+    "description": "Discard button label"
+  },
+  "searchPlaceholder": "Search...",
+  "@searchPlaceholder": {
+    "description": "Search placeholder text"
+  },
+  "weekly": "Weekly",
+  "@weekly": {
+    "description": "Weekly report range label"
+  },
+  "monthly": "Monthly",
+  "@monthly": {
+    "description": "Monthly report range label"
+  },
+  "annual": "Annual",
+  "@annual": {
+    "description": "Annual report range label"
+  },
+  "addPicture": "Add picture",
+  "@addPicture": {
+    "description": "Add picture button label"
+  },
+  "changePicture": "Change picture",
+  "@changePicture": {
+    "description": "Change picture button label"
+  },
+  "britishPound": "British Pound",
+  "@britishPound": {
+    "description": "British Pound currency name"
+  },
+  "usDollar": "US Dollar",
+  "@usDollar": {
+    "description": "US Dollar currency name"
+  },
+  "euro": "Euro",
+  "@euro": {
+    "description": "Euro currency name"
+  },
+  "japaneseYen": "Japanese Yen",
+  "@japaneseYen": {
+    "description": "Japanese Yen currency name"
+  },
+  "hongKongDollar": "Hong Kong Dollar",
+  "@hongKongDollar": {
+    "description": "Hong Kong Dollar currency name"
+  },
+  "australianDollar": "Australian Dollar",
+  "@australianDollar": {
+    "description": "Australian Dollar currency name"
+  },
+  "canadianDollar": "Canadian Dollar",
+  "@canadianDollar": {
+    "description": "Canadian Dollar currency name"
+  },
+  "indianRupee": "Indian Rupee",
+  "@indianRupee": {
+    "description": "Indian Rupee currency name"
+  },
+  "southKoreanWon": "South Korean Won",
+  "@southKoreanWon": {
+    "description": "South Korean Won currency name"
+  },
+  "swissFranc": "Swiss Franc",
+  "@swissFranc": {
+    "description": "Swiss Franc currency name"
+  }
+}

@@ -1,6 +1,26 @@
 // lib/common/widgets/form.dart
 import "package:flutter/material.dart";
 
+/// Localized strings for the [ConfirmCancelForm] widget.
+class ConfirmCancelFormLabels {
+  final String cancelButton;
+  final String saveButton;
+  final String discardDialogTitle;
+  final String discardDialogContent;
+  final String keepEditingButton;
+  final String discardButton;
+
+  const ConfirmCancelFormLabels({
+    this.cancelButton = "Cancel",
+    this.saveButton = "Save",
+    this.discardDialogTitle = "Discard changes?",
+    this.discardDialogContent =
+        "You have unsaved changes. Do you want to discard them?",
+    this.keepEditingButton = "Keep editing",
+    this.discardButton = "Discard",
+  });
+}
+
 class ConfirmCancelForm extends StatelessWidget {
   final String title;
   final List<Widget> children;
@@ -14,6 +34,9 @@ class ConfirmCancelForm extends StatelessWidget {
   /// Called when the user presses Save.
   final VoidCallback onSave;
 
+  /// Localized labels for buttons and dialog.
+  final ConfirmCancelFormLabels labels;
+
   const ConfirmCancelForm({
     super.key,
     required this.title,
@@ -21,6 +44,7 @@ class ConfirmCancelForm extends StatelessWidget {
     required this.hasChanges,
     required this.onCancelConfirmed,
     required this.onSave,
+    this.labels = const ConfirmCancelFormLabels(),
   });
 
   Future<void> _handleCancel(BuildContext context) async {
@@ -39,21 +63,19 @@ class ConfirmCancelForm extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Discard changes?"),
-        content: const Text(
-          "You have unsaved changes. Do you want to discard them?",
-        ),
+        title: Text(labels.discardDialogTitle),
+        content: Text(labels.discardDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text("Keep editing"),
+            child: Text(labels.keepEditingButton),
           ),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text("Discard"),
+            child: Text(labels.discardButton),
           ),
         ],
       ),
@@ -78,10 +100,10 @@ class ConfirmCancelForm extends StatelessWidget {
           children: [
             TextButton(
               onPressed: () => _handleCancel(context),
-              child: const Text("Cancel"),
+              child: Text(labels.cancelButton),
             ),
             const Spacer(),
-            FilledButton(onPressed: onSave, child: const Text("Save")),
+            FilledButton(onPressed: onSave, child: Text(labels.saveButton)),
           ],
         ),
       ],

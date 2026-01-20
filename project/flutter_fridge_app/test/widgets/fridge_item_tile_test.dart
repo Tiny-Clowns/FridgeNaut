@@ -1,4 +1,6 @@
 import "package:flutter/material.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_tile.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
@@ -40,6 +42,13 @@ Future<void> _pumpTile(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: FridgeItemTile(
           data: data,
