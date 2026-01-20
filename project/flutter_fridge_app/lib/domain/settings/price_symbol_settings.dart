@@ -1,21 +1,21 @@
 class CurrencyOption {
-  final String label;
+  final String labelKey;
   final String symbol;
-  const CurrencyOption({required this.label, required this.symbol});
+  const CurrencyOption({required this.labelKey, required this.symbol});
 }
 
 const String priceSymbolPrefKey = "price_symbol";
 const String defaultPriceSymbol = "£";
 
 const List<CurrencyOption> currencyOptions = <CurrencyOption>[
-  CurrencyOption(label: "British Pound", symbol: "£"),
-  CurrencyOption(label: "US Dollar", symbol: "\$"),
-  CurrencyOption(label: "Euro", symbol: "€"),
-  CurrencyOption(label: "Japanese Yen", symbol: "¥"),
-  CurrencyOption(label: "Hong Kong Dollar", symbol: "HK\$"),
-  CurrencyOption(label: "Australian Dollar", symbol: "A\$"),
-  CurrencyOption(label: "Canadian Dollar", symbol: "C\$"),
-  CurrencyOption(label: "Indian Rupee", symbol: "₹"),
-  CurrencyOption(label: "South Korean Won", symbol: "₩"),
-  CurrencyOption(label: "Swiss Franc", symbol: "CHF"),
+  CurrencyOption(labelKey: "britishPound", symbol: "£"),
+  CurrencyOption(labelKey: "usDollar", symbol: "\$"),
+  CurrencyOption(labelKey: "euro", symbol: "€"),
+  CurrencyOption(labelKey: "japaneseYen", symbol: "¥"),
+  CurrencyOption(labelKey: "hongKongDollar", symbol: "HK\$"),
+  CurrencyOption(labelKey: "australianDollar", symbol: "A\$"),
+  CurrencyOption(labelKey: "canadianDollar", symbol: "C\$"),
+  CurrencyOption(labelKey: "indianRupee", symbol: "₹"),
+  CurrencyOption(labelKey: "southKoreanWon", symbol: "₩"),
+  CurrencyOption(labelKey: "swissFranc", symbol: "CHF"),
 ];

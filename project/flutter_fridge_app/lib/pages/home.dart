@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/common/widgets/stat_card.dart";
@@ -24,14 +25,15 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final alertsAsync = ref.watch(alertsNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Home")),
+      appBar: AppBar(title: Text(l10n.home)),
       body: alertsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorView(context, ref, error),
-        data: (alerts) => _buildAlertsList(context, ref, alerts),
+        error: (error, stack) => _buildErrorView(context, ref, error, l10n),
+        data: (alerts) => _buildAlertsList(context, ref, alerts, l10n),
       ),
     );
   }
@@ -40,6 +42,7 @@ class HomePage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Map<String, List<Item>> alerts,
+    AppLocalizations l10n,
   ) {
     final lowItems = alerts[AlertKeys.low] ?? <Item>[];
     final expSoonItems = alerts[AlertKeys.expiringSoon] ?? <Item>[];
@@ -63,27 +66,27 @@ class HomePage extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           StatCard(
-            title: "Low stock",
+            title: l10n.lowStock,
             count: low,
             onTap: () => _openFridgeWithFilter(context, AlertKeys.low),
           ),
           StatCard(
-            title: "Expiring soon",
+            title: l10n.expiringSoon,
             count: expSoon,
             onTap: () => _openFridgeWithFilter(context, AlertKeys.expiringSoon),
           ),
           StatCard(
-            title: "Expired",
+            title: l10n.expired,
             count: expired,
             onTap: () => _openFridgeWithFilter(context, AlertKeys.expired),
           ),
           StatCard(
-            title: "Out of stock",
+            title: l10n.outOfStock,
             count: oos,
             onTap: () => _openFridgeWithFilter(context, AlertKeys.outOfStock),
           ),
           StatCard(
-            title: "Planned to buy",
+            title: l10n.plannedToBuy,
             count: buy,
             // no navigation
           ),
@@ -92,7 +95,12 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorView(BuildContext context, WidgetRef ref, Object error) {
+  Widget _buildErrorView(
+    BuildContext context,
+    WidgetRef ref,
+    Object error,
+    AppLocalizations l10n,
+  ) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -102,7 +110,7 @@ class HomePage extends ConsumerWidget {
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              "Failed to load alerts",
+              l10n.failedToLoadAlerts,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -116,7 +124,7 @@ class HomePage extends ConsumerWidget {
               onPressed: () =>
                   ref.read(alertsNotifierProvider.notifier).refresh(),
               icon: const Icon(Icons.refresh),
-              label: const Text("Retry"),
+              label: Text(l10n.retry),
             ),
           ],
         ),

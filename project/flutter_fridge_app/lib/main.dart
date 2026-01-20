@@ -1,8 +1,12 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
 import "package:flutter_fridge_app/data/repository.dart";
+import "package:flutter_fridge_app/domain/settings/locale_resolver.dart";
 import "package:flutter_fridge_app/providers/theme_provider.dart";
+import "package:flutter_fridge_app/providers/locale_provider.dart";
 import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
@@ -27,12 +31,35 @@ class App extends ConsumerWidget {
         .watch(themeModeProvider)
         .maybeWhen(data: (m) => m, orElse: () => ThemeMode.light);
 
+    final locale = ref
+        .watch(localeProvider)
+        .maybeWhen(data: (l) => l, orElse: () => null);
+
     return MaterialApp(
       title: "FridgeNaut",
       theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
       darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
+      // Localization support
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      // If the app is set to follow the system (locale == null), pick the
+      // best supported locale matching the device. If there is no match,
+      // fall back to English.
+      localeResolutionCallback: (deviceLocale, supported) {
+        // If user explicitly chose a locale (not system), use it.
+        if (locale != null) return locale;
+
+        // Delegate resolution to helper for testability and single responsibility.
+        return resolveDeviceLocale(deviceLocale, supported);
+      },
       home: const Shell(),
     );
   }
@@ -63,6 +90,7 @@ class ShellState extends ConsumerState<Shell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final pages = [
       const HomePage(),
       FridgePage(initialFilter: _fridgeInitialFilter),
@@ -74,19 +102,22 @@ class ShellState extends ConsumerState<Shell> {
       body: pages[_idx],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _idx,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: "Home"),
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.kitchen_outlined),
-            label: "Fridge",
+            icon: const Icon(Icons.home_outlined),
+            label: l10n.home,
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            label: "Reports",
+            icon: const Icon(Icons.kitchen_outlined),
+            label: l10n.fridge,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: "Settings",
+            icon: const Icon(Icons.bar_chart_outlined),
+            label: l10n.reports,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            label: l10n.settings,
           ),
         ],
         onDestinationSelected: (i) {

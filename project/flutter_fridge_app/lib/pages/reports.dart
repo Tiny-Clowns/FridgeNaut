@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/common/widgets/stat_card.dart";
@@ -55,13 +56,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_err != null) {
-      return _buildErrorView();
+      return _buildErrorView(l10n);
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Reports")),
+      appBar: AppBar(title: Text(l10n.reports)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -69,16 +72,31 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           padding: const EdgeInsets.all(16),
           children: [
             for (final range in reportRanges)
-              _card(range.label, _reports[range]),
+              _card(
+                _getLocalizedRangeLabel(range, l10n),
+                _reports[range],
+                l10n,
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildErrorView() {
+  String _getLocalizedRangeLabel(ReportRange range, AppLocalizations l10n) {
+    switch (range) {
+      case ReportRange.weekly:
+        return l10n.weekly;
+      case ReportRange.monthly:
+        return l10n.monthly;
+      case ReportRange.annual:
+        return l10n.annual;
+    }
+  }
+
+  Widget _buildErrorView(AppLocalizations l10n) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Reports")),
+      appBar: AppBar(title: Text(l10n.reports)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -88,7 +106,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                "Failed to load reports",
+                l10n.failedToLoadReports,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -101,7 +119,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text("Retry"),
+                label: Text(l10n.retry),
               ),
             ],
           ),
@@ -110,8 +128,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
   }
 
-  Widget _card(String title, Map<String, num>? data) {
+  Widget _card(String title, Map<String, num>? data, AppLocalizations l10n) {
     final cost = (data?["totalCost"] ?? 0).toStringAsFixed(2);
-    return StatCard(title: title, subtitle: "Cost: $cost");
+    return StatCard(title: title, subtitle: l10n.cost(cost));
   }
 }

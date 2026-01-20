@@ -5,6 +5,7 @@ import "package:flutter_fridge_app/common/widgets/confirm_cancel_form.dart";
 
 import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
 bool _sameDateOnly(DateTime? a, DateTime? b) {
   if (a == null || b == null) return a == b;
@@ -92,7 +93,9 @@ class _ItemFormState extends State<ItemForm> {
   late final _ItemFormSnapshot _initialSnapshot;
 
   bool get _isEdit => widget.existing != null;
-  String get _title => _isEdit ? "Edit item" : "Add item";
+
+  String _title(AppLocalizations l10n) =>
+      _isEdit ? l10n.editItem : l10n.addItem;
 
   @override
   void initState() {
@@ -180,16 +183,16 @@ class _ItemFormState extends State<ItemForm> {
     }
   }
 
-  String? _validateRequiredText(String? v) {
-    if (v == null || v.trim().isEmpty) return "Required";
+  String? _validateRequiredText(String? v, AppLocalizations l10n) {
+    if (v == null || v.trim().isEmpty) return l10n.required;
     return null;
   }
 
-  String? _validateRequiredNonNegativeNumber(String? v) {
-    if (v == null || v.trim().isEmpty) return "Required";
+  String? _validateRequiredNonNegativeNumber(String? v, AppLocalizations l10n) {
+    if (v == null || v.trim().isEmpty) return l10n.required;
     final value = double.tryParse(v.trim());
-    if (value == null) return "Number";
-    if (value < 0) return "Min 0";
+    if (value == null) return l10n.invalidNumber;
+    if (value < 0) return l10n.minZero;
     return null;
   }
 
@@ -200,9 +203,9 @@ class _ItemFormState extends State<ItemForm> {
     return unit.isEmpty ? _defaultUnit : unit;
   }
 
-  String get _expirationLabel {
+  String _expirationLabel(AppLocalizations l10n) {
     final date = _expirationDate;
-    return date == null ? "None" : formatLocalIsoDate(date);
+    return date == null ? l10n.none : formatLocalIsoDate(date);
   }
 
   bool get _isPastExpiry {
@@ -286,6 +289,7 @@ class _ItemFormState extends State<ItemForm> {
   TextFormField _buildNumberField({
     required TextEditingController controller,
     required String label,
+    required AppLocalizations l10n,
     String? prefixText,
   }) {
     return _buildTextField(
@@ -293,7 +297,7 @@ class _ItemFormState extends State<ItemForm> {
       label: label,
       prefixText: prefixText,
       keyboardType: _numberKeyboard,
-      validator: _validateRequiredNonNegativeNumber,
+      validator: (v) => _validateRequiredNonNegativeNumber(v, l10n),
     );
   }
 
@@ -304,20 +308,20 @@ class _ItemFormState extends State<ItemForm> {
     );
   }
 
-  Widget _buildNameField() {
+  Widget _buildNameField(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTextField(
           controller: _nameController,
-          label: "Name",
-          validator: _validateRequiredText,
+          label: l10n.name,
+          validator: (v) => _validateRequiredText(v, l10n),
         ),
         if (_isDuplicateName)
           Padding(
             padding: const EdgeInsets.only(top: 8, left: 12, right: 12),
             child: Text(
-              "This name already exists, but you can still create a new one with the same name.",
+              l10n.duplicateNameWarning,
               style: TextStyle(color: Colors.yellow.shade700, fontSize: 12),
             ),
           ),
@@ -325,30 +329,32 @@ class _ItemFormState extends State<ItemForm> {
     );
   }
 
-  Widget _buildQuantityUnitRow() {
+  Widget _buildQuantityUnitRow(AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
           child: _buildNumberField(
             controller: _quantityController,
-            label: "Quantity",
+            label: l10n.quantity,
+            l10n: l10n,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildTextField(controller: _unitController, label: "Unit"),
+          child: _buildTextField(controller: _unitController, label: l10n.unit),
         ),
       ],
     );
   }
 
-  Widget _buildPriceLowRow() {
+  Widget _buildPriceLowRow(AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
           child: _buildNumberField(
             controller: _priceController,
-            label: "Price per unit",
+            label: l10n.pricePerUnit,
+            l10n: l10n,
             prefixText: "${widget.currencySymbol} ",
           ),
         ),
@@ -356,19 +362,20 @@ class _ItemFormState extends State<ItemForm> {
         Expanded(
           child: _buildNumberField(
             controller: _lowThresholdController,
-            label: "Low threshold",
+            label: l10n.lowThreshold,
+            l10n: l10n,
           ),
         ),
       ],
     );
   }
 
-  List<Widget> _buildExpirationSection() {
+  List<Widget> _buildExpirationSection(AppLocalizations l10n) {
     return [
       ListTile(
         contentPadding: EdgeInsets.zero,
-        title: const Text("Expiration date"),
-        subtitle: Text(_expirationLabel),
+        title: Text(l10n.expirationDate),
+        subtitle: Text(_expirationLabel(l10n)),
         trailing: IconButton(
           icon: const Icon(Icons.date_range),
           onPressed: _selectExpirationDate,
@@ -376,28 +383,28 @@ class _ItemFormState extends State<ItemForm> {
       ),
       if (_isPastExpiry) ...[
         const SizedBox(height: 4),
-        const Text(
-          "Note: this expiration date is in the past.",
-          style: TextStyle(color: Colors.orange, fontSize: 12),
+        Text(
+          l10n.pastExpiryNote,
+          style: const TextStyle(color: Colors.orange, fontSize: 12),
         ),
       ],
     ];
   }
 
-  List<Widget> _buildNotificationSwitches() {
+  List<Widget> _buildNotificationSwitches(AppLocalizations l10n) {
     return [
       SwitchListTile(
-        title: const Text("Planned to buy"),
+        title: Text(l10n.plannedToBuy),
         value: _toBuy,
         onChanged: (v) => setState(() => _toBuy = v),
       ),
       SwitchListTile(
-        title: const Text("Notify on low"),
+        title: Text(l10n.notifyOnLow),
         value: _notifyOnLow,
         onChanged: (v) => setState(() => _notifyOnLow = v),
       ),
       SwitchListTile(
-        title: const Text("Notify on expire"),
+        title: Text(l10n.notifyOnExpire),
         value: _notifyOnExpire,
         onChanged: (v) => setState(() => _notifyOnExpire = v),
       ),
@@ -406,7 +413,17 @@ class _ItemFormState extends State<ItemForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    final formLabels = ConfirmCancelFormLabels(
+      cancelButton: l10n.cancel,
+      saveButton: l10n.save,
+      discardDialogTitle: l10n.discardChanges,
+      discardDialogContent: l10n.discardChangesMessage,
+      keepEditingButton: l10n.keepEditing,
+      discardButton: l10n.discard,
+    );
 
     return SafeArea(
       child: Padding(
@@ -419,21 +436,22 @@ class _ItemFormState extends State<ItemForm> {
         child: Form(
           key: _form,
           child: ConfirmCancelForm(
-            title: _title,
+            title: _title(l10n),
             hasChanges: _hasChanges,
             onCancelConfirmed: _closeWithoutResult,
             onSave: _handleSave,
+            labels: formLabels,
             children: [
               _buildImageSelector(),
               const SizedBox(height: 16),
 
-              _buildNameField(),
-              _buildQuantityUnitRow(),
-              _buildPriceLowRow(),
+              _buildNameField(l10n),
+              _buildQuantityUnitRow(l10n),
+              _buildPriceLowRow(l10n),
               const SizedBox(height: 8),
 
-              ..._buildExpirationSection(),
-              ..._buildNotificationSwitches(),
+              ..._buildExpirationSection(l10n),
+              ..._buildNotificationSwitches(l10n),
             ],
           ),
         ),

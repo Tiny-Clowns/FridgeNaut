@@ -2,6 +2,7 @@ import "dart:io";
 
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/common/extensions/string_extensions.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
 import "package:flutter_fridge_app/models/item.dart";
@@ -126,7 +127,7 @@ class FridgeItemTile extends StatelessWidget {
           if (data.expiryText != null) ...[
             const TextSpan(text: " | "),
             TextSpan(
-              text: data.expiryText,
+              text: _localizedExpiryText(context, data.expiryText!),
               style: data.isExpired
                   ? const TextStyle(color: Colors.red)
                   : data.isExpiringSoon
@@ -156,4 +157,13 @@ class FridgeItemTile extends StatelessWidget {
       ],
     );
   }
+}
+
+String _localizedExpiryText(BuildContext context, String rawExpiryText) {
+  // rawExpiryText currently formatted as "exp YYYY-MM-DD".
+  final l10n = AppLocalizations.of(context)!;
+  if (rawExpiryText.startsWith('exp ')) {
+    return "${l10n.expiryAbbrev}${rawExpiryText.substring(3)}";
+  }
+  return rawExpiryText;
 }

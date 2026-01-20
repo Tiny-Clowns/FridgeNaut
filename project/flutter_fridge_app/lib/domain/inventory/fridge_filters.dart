@@ -2,6 +2,31 @@ import "package:flutter_fridge_app/common/widgets/search_filter_list.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
 import "package:flutter_fridge_app/models/item.dart";
 
+/// A class that holds localized filter labels for fridge filters.
+class FridgeFilterLabels {
+  final String inStock;
+  final String lowStock;
+  final String expiringSoon;
+  final String expired;
+  final String outOfStock;
+
+  const FridgeFilterLabels({
+    required this.inStock,
+    required this.lowStock,
+    required this.expiringSoon,
+    required this.expired,
+    required this.outOfStock,
+  });
+
+  /// Default English labels (fallback).
+  const FridgeFilterLabels.english()
+    : inStock = "In stock",
+      lowStock = "Low stock",
+      expiringSoon = "Expiring soon",
+      expired = "Expired",
+      outOfStock = "Out of stock";
+}
+
 /// Builds a list of filter definitions for fridge items.
 ///
 /// The filter order is:
@@ -12,10 +37,13 @@ import "package:flutter_fridge_app/models/item.dart";
 /// - 4: Out of stock
 ///
 /// These can be reused across different list views.
-List<FilterDefinition<Item>> buildFridgeFilters({required int expirySoonDays}) {
+List<FilterDefinition<Item>> buildFridgeFilters({
+  required int expirySoonDays,
+  FridgeFilterLabels labels = const FridgeFilterLabels.english(),
+}) {
   return <FilterDefinition<Item>>[
     FilterDefinition<Item>(
-      label: "In stock",
+      label: labels.inStock,
       predicate: (it) {
         final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
         // Anything that is not out of stock
@@ -23,14 +51,14 @@ List<FilterDefinition<Item>> buildFridgeFilters({required int expirySoonDays}) {
       },
     ),
     FilterDefinition<Item>(
-      label: "Low stock",
+      label: labels.lowStock,
       predicate: (it) {
         final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
         return status.stock == StockStatus.low;
       },
     ),
     FilterDefinition<Item>(
-      label: "Expiring soon",
+      label: labels.expiringSoon,
       predicate: (it) {
         final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
         // Expiring soon AND not out of stock
@@ -39,7 +67,7 @@ List<FilterDefinition<Item>> buildFridgeFilters({required int expirySoonDays}) {
       },
     ),
     FilterDefinition<Item>(
-      label: "Expired",
+      label: labels.expired,
       predicate: (it) {
         final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
         // Expired AND not out of stock
@@ -47,7 +75,7 @@ List<FilterDefinition<Item>> buildFridgeFilters({required int expirySoonDays}) {
       },
     ),
     FilterDefinition<Item>(
-      label: "Out of stock",
+      label: labels.outOfStock,
       predicate: (it) {
         final status = calculateItemStatus(it, expirySoonDays: expirySoonDays);
         return status.isOutOfStock;
