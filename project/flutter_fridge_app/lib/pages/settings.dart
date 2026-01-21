@@ -17,7 +17,9 @@ import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
 import "package:flutter_fridge_app/providers/theme_provider.dart";
 
 class SettingsPage extends ConsumerStatefulWidget {
-  const SettingsPage({super.key});
+  final ScrollController? scrollController;
+
+  const SettingsPage({super.key, this.scrollController});
 
   @override
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
@@ -567,6 +569,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             child: ListView(
+              controller: widget.scrollController,
               children: [
                 const SizedBox(height: 16),
                 // Calendar & reporting section - hidden for first release

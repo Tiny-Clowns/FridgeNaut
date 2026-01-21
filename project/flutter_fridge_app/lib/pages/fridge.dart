@@ -19,8 +19,9 @@ class FridgePage extends ConsumerStatefulWidget {
   ///
   /// When null, the fridge opens on the "In stock" filter.
   final String? initialFilter;
+  final ScrollController? scrollController;
 
-  const FridgePage({super.key, this.initialFilter});
+  const FridgePage({super.key, this.initialFilter, this.scrollController});
 
   @override
   ConsumerState<FridgePage> createState() => _FridgePageState();
@@ -135,6 +136,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
           expirySoonDays: _expirySoonDays,
           currencySymbol: currencySymbol,
           initialFilterKey: widget.initialFilter,
+          scrollController: widget.scrollController,
           onRefresh: () => ref.read(itemsNotifierProvider.notifier).refresh(),
           onEdit: _editItem,
           onIncrement: (it) => _adjust(it, 1),

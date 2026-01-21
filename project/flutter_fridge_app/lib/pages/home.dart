@@ -9,7 +9,9 @@ import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:flutter_fridge_app/providers/alerts_provider.dart";
 
 class HomePage extends ConsumerWidget {
-  const HomePage({super.key});
+  final ScrollController? scrollController;
+
+  const HomePage({super.key, this.scrollController});
 
   void _openFridgeWithFilter(BuildContext context, String filterKey) {
     final shell = Shell.of(context);
@@ -62,6 +64,7 @@ class HomePage extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.read(alertsNotifierProvider.notifier).refresh(),
       child: ListView(
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
