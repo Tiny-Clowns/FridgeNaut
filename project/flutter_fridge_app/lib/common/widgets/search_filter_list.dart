@@ -19,6 +19,7 @@ class SearchFilterList<T> extends StatefulWidget {
   final List<FilterDefinition<T>> filters;
   final Widget Function(BuildContext context, T item) itemBuilder;
   final Future<void> Function()? onRefresh;
+  final ScrollController? scrollController;
 
   /// Index of the initially selected chip, where the chip order is:
   ///
@@ -61,6 +62,7 @@ class SearchFilterList<T> extends StatefulWidget {
     this.allFilterFirst = true,
     this.allPredicate,
     this.searchHint = "Search",
+    this.scrollController,
   });
 
   @override
@@ -306,6 +308,7 @@ class _SearchFilterListState<T> extends State<SearchFilterList<T>> {
     final visibleItems = _calculateFilteredItems();
 
     return ListView.separated(
+      controller: widget.scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: visibleItems.length + 1,
       separatorBuilder: (context, index) => const Divider(height: 1),
