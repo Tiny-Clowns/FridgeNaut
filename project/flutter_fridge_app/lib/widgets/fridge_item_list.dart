@@ -15,6 +15,7 @@ class FridgeItemList extends StatelessWidget {
   final Future<void> Function(Item item) onEdit;
   final Future<void> Function(Item item) onIncrement;
   final Future<void> Function(Item item) onDecrementOrDelete;
+  final ScrollController? scrollController;
 
   /// One of: AlertKeys.low, AlertKeys.expiringSoon, AlertKeys.expired,
   /// AlertKeys.outOfStock, or null.
@@ -32,6 +33,7 @@ class FridgeItemList extends StatelessWidget {
     required this.onIncrement,
     required this.onDecrementOrDelete,
     this.initialFilterKey,
+    this.scrollController,
   });
 
   int _initialFilterIndex() {
@@ -97,6 +99,7 @@ class FridgeItemList extends StatelessWidget {
       initialFilterIndex: _initialFilterIndex(),
       onRefresh: onRefresh,
       itemBuilder: _buildTile,
+      scrollController: scrollController,
       // Fridge-specific: we want "In stock" first, and "All" as the last chip.
       showAllFilter: true,
       allLabel: l10n.all,

@@ -7,7 +7,9 @@ import "package:flutter_fridge_app/common/widgets/stat_card.dart";
 import "package:flutter_fridge_app/domain/reports/report_range.dart";
 
 class ReportsPage extends ConsumerStatefulWidget {
-  const ReportsPage({super.key});
+  final ScrollController? scrollController;
+
+  const ReportsPage({super.key, this.scrollController});
   @override
   ConsumerState<ReportsPage> createState() => _ReportsPageState();
 }
@@ -68,6 +70,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
+          controller: widget.scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [

@@ -81,6 +81,21 @@ class ShellState extends ConsumerState<Shell> {
   // AlertKeys.outOfStock, or null.
   String? _fridgeInitialFilter;
 
+  // ScrollControllers for each page
+  final ScrollController _homeScrollController = ScrollController();
+  final ScrollController _fridgeScrollController = ScrollController();
+  final ScrollController _reportsScrollController = ScrollController();
+  final ScrollController _settingsScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _homeScrollController.dispose();
+    _fridgeScrollController.dispose();
+    _reportsScrollController.dispose();
+    _settingsScrollController.dispose();
+    super.dispose();
+  }
+
   void navigateToFridge(String? filterKey) {
     setState(() {
       _idx = 1; // Fridge tab
@@ -88,14 +103,27 @@ class ShellState extends ConsumerState<Shell> {
     });
   }
 
+  void _scrollToTop(ScrollController controller) {
+    if (controller.hasClients) {
+      controller.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final pages = [
-      const HomePage(),
-      FridgePage(initialFilter: _fridgeInitialFilter),
-      const ReportsPage(),
-      const SettingsPage(),
+      HomePage(scrollController: _homeScrollController),
+      FridgePage(
+        initialFilter: _fridgeInitialFilter,
+        scrollController: _fridgeScrollController,
+      ),
+      ReportsPage(scrollController: _reportsScrollController),
+      SettingsPage(scrollController: _settingsScrollController),
     ];
 
     return Scaffold(
@@ -121,6 +149,25 @@ class ShellState extends ConsumerState<Shell> {
           ),
         ],
         onDestinationSelected: (i) {
+          // If tapping the same tab, scroll to top
+          if (_idx == i) {
+            switch (i) {
+              case 0:
+                _scrollToTop(_homeScrollController);
+                break;
+              case 1:
+                _scrollToTop(_fridgeScrollController);
+                break;
+              case 2:
+                _scrollToTop(_reportsScrollController);
+                break;
+              case 3:
+                _scrollToTop(_settingsScrollController);
+                break;
+            }
+            return;
+          }
+
           setState(() {
             _idx = i;
             if (i == 1) {
