@@ -59,6 +59,7 @@
   "confirmDelete": "Löschen bestätigen",
   "confirmDeleteMessage": "Sind Sie sicher, dass Sie diesen Artikel löschen möchten?",
   "noItems": "Keine Artikel gefunden",
+  "endOfList": "Alle Artikel oben angezeigt",
   "failedToLoadItems": "Fehler beim Laden der Artikel",
   "searchItems": "Artikel suchen...",
   "category": "Kategorie",

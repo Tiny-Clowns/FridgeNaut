@@ -450,6 +450,12 @@ abstract class AppLocalizations {
   /// **'No items found'**
   String get noItems;
 
+  /// Message shown at the bottom of item lists to indicate all items are displayed
+  ///
+  /// In en, this message translates to:
+  /// **'All items shown above'**
+  String get endOfList;
+
   /// Error message when items fail to load
   ///
   /// In en, this message translates to:

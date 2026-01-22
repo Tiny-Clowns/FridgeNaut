@@ -59,6 +59,7 @@
   "confirmDelete": "确认删除",
   "confirmDeleteMessage": "您确定要删除此项目吗？",
   "noItems": "找不到项目",
+  "endOfList": "所有项目已显示在上方",
   "failedToLoadItems": "无法加载项目",
   "searchItems": "搜索项目...",
   "category": "类别",

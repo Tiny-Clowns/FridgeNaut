@@ -184,6 +184,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noItems => 'Nenhum item encontrado';
 
   @override
+  String get endOfList => 'Todos os itens mostrados acima';
+
+  @override
   String get failedToLoadItems => 'Falha ao carregar itens';
 
   @override

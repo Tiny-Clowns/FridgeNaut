@@ -244,6 +244,10 @@
   "@noItems": {
     "description": "No items message"
   },
+  "endOfList": "All items shown above",
+  "@endOfList": {
+    "description": "Message shown at the bottom of item lists to indicate all items are displayed"
+  },
   "failedToLoadItems": "Failed to load items",
   "@failedToLoadItems": {
     "description": "Error message when items fail to load"

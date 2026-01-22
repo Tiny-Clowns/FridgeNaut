@@ -43,4 +43,37 @@ void main() {
     expect(find.text("Banana"), findsOneWidget);
     expect(find.text("Apple"), findsNothing);
   });
+
+  testWidgets('renders endOfList widget and bottom spacer height', (
+    WidgetTester tester,
+  ) async {
+    final items = <String>["Apple"];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SearchFilterList<String>(
+            items: items,
+            searchText: (s) => s,
+            filters: [FilterDefinition(label: 'All', predicate: (_) => true)],
+            itemBuilder: (context, s) => ListTile(title: Text(s)),
+            endOfListWidget: const Text('All items shown above'),
+            bottomSpacerHeight: 90,
+            bottomSpacerCount: 2,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify the endOfList widget text is present
+    expect(find.text('All items shown above'), findsOneWidget);
+
+    // Verify a SizedBox with the configured height exists (the second spacer)
+    final finder = find.byWidgetPredicate(
+      (w) => w is SizedBox && w.height == 90,
+    );
+    expect(finder, findsOneWidget);
+  });
 }
