@@ -182,6 +182,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noItems => 'アイテムが見つかりません';
 
   @override
+  String get endOfList => 'すべてのアイテムを上に表示';
+
+  @override
   String get failedToLoadItems => 'アイテムの読み込みに失敗しました';
 
   @override

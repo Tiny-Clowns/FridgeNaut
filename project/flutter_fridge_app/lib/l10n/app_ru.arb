@@ -59,6 +59,7 @@
   "confirmDelete": "Подтвердить удаление",
   "confirmDeleteMessage": "Вы уверены, что хотите удалить этот товар?",
   "noItems": "Товары не найдены",
+  "endOfList": "Все товары показаны выше",
   "failedToLoadItems": "Не удалось загрузить товары",
   "searchItems": "Поиск товаров...",
   "category": "Категория",

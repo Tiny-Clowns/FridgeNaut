@@ -59,6 +59,7 @@
   "confirmDelete": "Confirmar exclusão",
   "confirmDeleteMessage": "Tem certeza de que deseja excluir este item?",
   "noItems": "Nenhum item encontrado",
+  "endOfList": "Todos os itens mostrados acima",
   "failedToLoadItems": "Falha ao carregar itens",
   "searchItems": "Pesquisar itens...",
   "category": "Categoria",

@@ -184,6 +184,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get noItems => 'Товары не найдены';
 
   @override
+  String get endOfList => 'Все товары показаны выше';
+
+  @override
   String get failedToLoadItems => 'Не удалось загрузить товары';
 
   @override

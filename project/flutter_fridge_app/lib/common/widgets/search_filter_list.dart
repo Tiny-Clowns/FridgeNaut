@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
 class FilterDefinition<T> {
   final String label;
@@ -20,6 +21,17 @@ class SearchFilterList<T> extends StatefulWidget {
   final Widget Function(BuildContext context, T item) itemBuilder;
   final Future<void> Function()? onRefresh;
   final ScrollController? scrollController;
+
+  /// Optional widget to show above the bottom spacer(s). If null, the
+  /// `AppLocalizations.endOfList` string is used.
+  final Widget? endOfListWidget;
+
+  /// Height of the bottom spacer (in logical pixels).
+  final double bottomSpacerHeight;
+
+  /// Number of spacer widgets to append at the end of the list (after the
+  /// header and visible items). Defaults to 2 to preserve previous behavior.
+  final int bottomSpacerCount;
 
   /// Index of the initially selected chip, where the chip order is:
   ///
@@ -63,6 +75,9 @@ class SearchFilterList<T> extends StatefulWidget {
     this.allPredicate,
     this.searchHint = "Search",
     this.scrollController,
+    this.endOfListWidget,
+    this.bottomSpacerHeight = 80,
+    this.bottomSpacerCount = 2,
   });
 
   @override
@@ -299,6 +314,35 @@ class _SearchFilterListState<T> extends State<SearchFilterList<T>> {
     if (index == 0) {
       return _buildHeader();
     }
+    // Bottom spacers (configurable count and height). The first spacer
+    // optionally shows a message widget; any remaining spacers are empty
+    // padding to provide clearance from FABs or system UI.
+    final spacerStartIndex = visibleItems.length + 1;
+    final spacerEndIndex = visibleItems.length + widget.bottomSpacerCount;
+    if (index > visibleItems.length && index <= spacerEndIndex) {
+      final spacerPosition = index - spacerStartIndex; // 0-based within spacers
+      if (spacerPosition == 0) {
+        final Widget message =
+            widget.endOfListWidget ??
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Center(
+                child: Text(
+                  AppLocalizations.of(context)?.endOfList ??
+                      'All items shown above',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+
+        return message;
+      }
+
+      return SizedBox(height: widget.bottomSpacerHeight);
+    }
 
     final item = visibleItems[index - 1];
     return widget.itemBuilder(context, item);
@@ -310,7 +354,10 @@ class _SearchFilterListState<T> extends State<SearchFilterList<T>> {
     return ListView.separated(
       controller: widget.scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: visibleItems.length + 1,
+      itemCount:
+          visibleItems.length +
+          1 +
+          widget.bottomSpacerCount, // +1 header + bottom spacers
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) =>
           _buildListItem(context, index, visibleItems),

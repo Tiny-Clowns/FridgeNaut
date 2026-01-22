@@ -59,6 +59,7 @@
   "confirmDelete": "削除の確認",
   "confirmDeleteMessage": "このアイテムを削除してもよろしいですか？",
   "noItems": "アイテムが見つかりません",
+  "endOfList": "すべてのアイテムを上に表示",
   "failedToLoadItems": "アイテムの読み込みに失敗しました",
   "searchItems": "アイテムを検索...",
   "category": "カテゴリ",
