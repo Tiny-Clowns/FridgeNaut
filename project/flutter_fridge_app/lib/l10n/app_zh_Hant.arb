@@ -59,6 +59,7 @@
   "confirmDelete": "確認刪除",
   "confirmDeleteMessage": "您確定要刪除此項目嗎？",
   "noItems": "找不到項目",
+  "endOfList": "所有項目已顯示在上方",
   "failedToLoadItems": "無法載入項目",
   "searchItems": "搜尋項目...",
   "category": "類別",

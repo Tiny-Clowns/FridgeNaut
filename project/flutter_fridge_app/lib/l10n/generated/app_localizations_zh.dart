@@ -181,6 +181,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noItems => '找不到项目';
 
   @override
+  String get endOfList => '所有项目已显示在上方';
+
+  @override
   String get failedToLoadItems => '无法加载项目';
 
   @override
@@ -466,6 +469,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get noItems => '找不到项目';
 
   @override
+  String get endOfList => '所有项目已显示在上方';
+
+  @override
   String get failedToLoadItems => '无法加载项目';
 
   @override
@@ -749,6 +755,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get noItems => '找不到項目';
+
+  @override
+  String get endOfList => '所有項目已顯示在上方';
 
   @override
   String get failedToLoadItems => '無法載入項目';

@@ -186,6 +186,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get noItems => 'Aucun article trouvé';
 
   @override
+  String get endOfList => 'Tous les articles affichés ci-dessus';
+
+  @override
   String get failedToLoadItems => 'Échec du chargement des articles';
 
   @override
