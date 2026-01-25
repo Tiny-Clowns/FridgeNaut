@@ -1,3 +1,1 @@
-enum AppBarPageOptions {
-  settings,
-}
+enum AppBarPageOptions { settings }
