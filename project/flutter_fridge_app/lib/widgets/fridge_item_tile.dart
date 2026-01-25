@@ -111,6 +111,8 @@ class FridgeItemTile extends StatelessWidget {
   Widget _buildSubtitle(BuildContext context, ThemeData theme) {
     final colorScheme = theme.colorScheme;
     final defaultStyle = theme.textTheme.bodyMedium;
+    const pricePadding = "     "; // 5 spaces :)
+    final expiryPadding = data.priceText != null ? '\n' : pricePadding;
 
     return Text.rich(
       TextSpan(
@@ -118,23 +120,23 @@ class FridgeItemTile extends StatelessWidget {
         children: [
           TextSpan(
             text: data.quantityText,
-            style: data.isQuantityLow ? TextStyle(color: Colors.red) : null,
+            style: data.isQuantityLow
+                ? const TextStyle(color: Colors.red)
+                : null,
           ),
-          if (data.priceText != null) ...[
-            const TextSpan(text: " | "),
-            TextSpan(text: data.priceText),
-          ],
-          if (data.expiryText != null) ...[
-            const TextSpan(text: " | "),
+          if (data.priceText != null)
+            TextSpan(text: pricePadding + data.priceText!),
+          if (data.expiryText != null)
             TextSpan(
-              text: _localizedExpiryText(context, data.expiryText!),
+              text:
+                  expiryPadding +
+                  _localizedExpiryText(context, data.expiryText!),
               style: data.isExpired
                   ? const TextStyle(color: Colors.red)
                   : data.isExpiringSoon
                   ? const TextStyle(color: Colors.orange)
                   : null,
             ),
-          ],
         ],
       ),
     );
