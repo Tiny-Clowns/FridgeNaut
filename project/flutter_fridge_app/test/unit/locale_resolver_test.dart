@@ -23,7 +23,10 @@ void main() {
   });
 
   test('zh Hant script resolves when supported', () {
-    final device = Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant');
+    final device = const Locale.fromSubtags(
+      languageCode: 'zh',
+      scriptCode: 'Hant',
+    );
     final r = resolveDeviceLocale(device, supported);
     expect(r.languageCode, 'zh');
     expect(r.scriptCode, 'Hant');

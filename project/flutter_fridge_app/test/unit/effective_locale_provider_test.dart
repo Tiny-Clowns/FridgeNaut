@@ -90,7 +90,7 @@ void main() {
         overrides: [
           localeProvider.overrideWith(
             () => FakeLocaleNotifier(
-              Locale.fromSubtags(languageCode: "zh", scriptCode: "Hant"),
+              const Locale.fromSubtags(languageCode: "zh", scriptCode: "Hant"),
             ),
           ),
           effectiveLocaleProvider.overrideWith((ref) {

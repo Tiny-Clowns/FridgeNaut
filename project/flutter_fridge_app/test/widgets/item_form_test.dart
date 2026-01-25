@@ -7,15 +7,15 @@ import "package:flutter_fridge_app/widgets/item_form.dart";
 
 Future<void> _pumpItemForm(WidgetTester tester) async {
   await tester.pumpWidget(
-    MaterialApp(
-      localizationsDelegates: const [
+    const MaterialApp(
+      localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: ItemForm()),
+      home: Scaffold(body: ItemForm()),
     ),
   );
 }

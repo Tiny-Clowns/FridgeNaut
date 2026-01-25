@@ -164,14 +164,14 @@ void main() {
 
   group("FridgeItemTile Widget", () {
     testWidgets("displays item name", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Milk",
         quantityText: "2 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -180,14 +180,14 @@ void main() {
     });
 
     testWidgets("displays quantity in subtitle", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 liters",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -196,7 +196,7 @@ void main() {
     });
 
     testWidgets("displays price when available", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         priceText: "\$2.50 / pcs",
@@ -204,7 +204,7 @@ void main() {
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -213,7 +213,7 @@ void main() {
     });
 
     testWidgets("displays expiry date when available", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         expiryText: "exp 2025-12-25",
@@ -221,7 +221,7 @@ void main() {
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -230,14 +230,14 @@ void main() {
     });
 
     testWidgets("shows remove icon when quantity > 0", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -247,14 +247,14 @@ void main() {
     });
 
     testWidgets("shows delete icon when quantity is 0", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "0 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: true,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -264,14 +264,14 @@ void main() {
     });
 
     testWidgets("plus button is green", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -283,14 +283,14 @@ void main() {
     });
 
     testWidgets("minus/delete button is red", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
@@ -303,14 +303,14 @@ void main() {
 
     testWidgets("calls onTap when tile is tapped", (tester) async {
       bool tapped = false;
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data, onTap: () => tapped = true);
@@ -323,14 +323,14 @@ void main() {
       tester,
     ) async {
       bool incremented = false;
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data, onIncrement: () => incremented = true);
@@ -343,14 +343,14 @@ void main() {
       tester,
     ) async {
       bool decremented = false;
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Test",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data, onDecrement: () => decremented = true);
@@ -360,14 +360,14 @@ void main() {
     });
 
     testWidgets("title text is black with font size 18", (tester) async {
-      final data = FridgeItemTileData(
+      final data = const FridgeItemTileData(
         displayName: "Milk",
         quantityText: "5 pcs",
         isQuantityLow: false,
         isExpired: false,
         isExpiringSoon: false,
         isZeroQuantity: false,
-        leadingImage: const CircleAvatar(child: Icon(Icons.fastfood)),
+        leadingImage: CircleAvatar(child: Icon(Icons.fastfood)),
       );
 
       await _pumpTile(tester, data);
