@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/models/item.dart";
+import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/main.dart";
@@ -31,7 +32,10 @@ class HomePage extends ConsumerWidget {
     final alertsAsync = ref.watch(alertsNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.home)),
+      appBar: AppBar(
+        title: Text(l10n.home),
+        actions: [AppBarPageOptionWidget(l10n: l10n)],
+      ),
       body: alertsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _buildErrorView(context, ref, error, l10n),

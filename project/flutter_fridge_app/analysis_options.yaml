@@ -15,5 +15,10 @@ linter:
     avoid_print: true
     prefer_single_quotes: false
     unnecessary_this: true
+
+    # Prefer consts when possible
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

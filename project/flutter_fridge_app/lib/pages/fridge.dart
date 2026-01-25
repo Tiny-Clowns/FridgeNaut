@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
@@ -127,7 +128,10 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.fridge)),
+      appBar: AppBar(
+        title: Text(l10n.fridge),
+        actions: [AppBarPageOptionWidget(l10n: l10n)],
+      ),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _buildErrorView(error, l10n),
