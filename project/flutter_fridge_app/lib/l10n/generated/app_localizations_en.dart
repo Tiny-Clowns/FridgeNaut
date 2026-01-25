@@ -214,9 +214,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get none => 'None';
 
   @override
-  String get notifyOnLow => 'Notify on low';
-
-  @override
   String get notifyOnExpire => 'Notify on expire';
 
   @override

@@ -211,9 +211,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get none => '无';
 
   @override
-  String get notifyOnLow => '库存不足时通知';
-
-  @override
   String get notifyOnExpire => '过期时通知';
 
   @override
@@ -499,9 +496,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get none => '无';
 
   @override
-  String get notifyOnLow => '库存不足时通知';
-
-  @override
   String get notifyOnExpire => '过期时通知';
 
   @override
@@ -785,9 +779,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get none => '無';
-
-  @override
-  String get notifyOnLow => '庫存不足時通知';
 
   @override
   String get notifyOnExpire => '過期時通知';

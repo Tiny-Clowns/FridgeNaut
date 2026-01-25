@@ -95,7 +95,6 @@ Item _makeItem({
     expirationDate: null,
     pricePerUnit: pricePerUnit,
     toBuy: false,
-    notifyOnLow: true,
     notifyOnExpire: true,
     lowThreshold: 1,
     createdAt: now,

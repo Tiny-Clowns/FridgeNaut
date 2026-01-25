@@ -214,9 +214,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get none => 'Nenhuma';
 
   @override
-  String get notifyOnLow => 'Notificar se estoque baixo';
-
-  @override
   String get notifyOnExpire => 'Notificar se vencido';
 
   @override

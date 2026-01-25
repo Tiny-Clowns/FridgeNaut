@@ -69,7 +69,6 @@
   "lowThreshold": "Порог низкого запаса",
   "expirationDate": "Срок годности",
   "none": "Нет",
-  "notifyOnLow": "Уведомить при низком запасе",
   "notifyOnExpire": "Уведомить при истечении",
   "required": "Обязательно",
   "invalidNumber": "Число",

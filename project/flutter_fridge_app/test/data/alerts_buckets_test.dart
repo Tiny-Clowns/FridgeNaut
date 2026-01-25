@@ -20,7 +20,6 @@ Item _makeItem({
     expirationDate: expirationDate,
     pricePerUnit: 1.0,
     toBuy: toBuy,
-    notifyOnLow: true,
     notifyOnExpire: true,
     lowThreshold: lowThreshold,
     createdAt: now,

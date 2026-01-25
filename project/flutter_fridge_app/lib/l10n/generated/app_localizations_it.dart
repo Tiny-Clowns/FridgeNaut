@@ -215,9 +215,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get none => 'Nessuna';
 
   @override
-  String get notifyOnLow => 'Notifica se scorte basse';
-
-  @override
   String get notifyOnExpire => 'Notifica se scaduto';
 
   @override

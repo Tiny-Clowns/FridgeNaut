@@ -69,7 +69,6 @@
   "lowThreshold": "在庫不足のしきい値",
   "expirationDate": "賞味期限",
   "none": "なし",
-  "notifyOnLow": "在庫不足時に通知",
   "notifyOnExpire": "期限切れ時に通知",
   "required": "必須",
   "invalidNumber": "数字",
