@@ -31,7 +31,6 @@ class AppDb {
         expirationDate TEXT NULL,
         pricePerUnit REAL NULL,
         toBuy INTEGER NOT NULL,
-        notifyOnLow INTEGER NOT NULL,
         notifyOnExpire INTEGER NOT NULL,
         lowThreshold REAL NOT NULL,
         createdAt TEXT NOT NULL,

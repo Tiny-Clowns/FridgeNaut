@@ -212,9 +212,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get none => 'なし';
 
   @override
-  String get notifyOnLow => '在庫不足時に通知';
-
-  @override
   String get notifyOnExpire => '期限切れ時に通知';
 
   @override

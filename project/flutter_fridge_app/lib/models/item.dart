@@ -6,7 +6,6 @@ class Item {
   final DateTime? expirationDate;
   final double? pricePerUnit;
   final bool toBuy;
-  final bool notifyOnLow;
   final bool notifyOnExpire;
   final double lowThreshold;
   final DateTime createdAt;
@@ -21,7 +20,6 @@ class Item {
     this.expirationDate,
     this.pricePerUnit,
     this.toBuy = false,
-    this.notifyOnLow = true,
     this.notifyOnExpire = true,
     this.lowThreshold = 1.0,
     required this.createdAt,
@@ -37,7 +35,6 @@ class Item {
     DateTime? expirationDate,
     double? pricePerUnit,
     bool? toBuy,
-    bool? notifyOnLow,
     bool? notifyOnExpire,
     double? lowThreshold,
     DateTime? createdAt,
@@ -52,7 +49,6 @@ class Item {
       expirationDate: expirationDate ?? this.expirationDate,
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
       toBuy: toBuy ?? this.toBuy,
-      notifyOnLow: notifyOnLow ?? this.notifyOnLow,
       notifyOnExpire: notifyOnExpire ?? this.notifyOnExpire,
       lowThreshold: lowThreshold ?? this.lowThreshold,
       createdAt: createdAt ?? this.createdAt,
@@ -70,7 +66,6 @@ class Item {
     "expirationDate": expirationDate?.toIso8601String(),
     "pricePerUnit": pricePerUnit,
     "toBuy": toBuy ? 1 : 0,
-    "notifyOnLow": notifyOnLow ? 1 : 0,
     "notifyOnExpire": notifyOnExpire ? 1 : 0,
     "lowThreshold": lowThreshold,
     "createdAt": createdAt.toIso8601String(),
@@ -90,7 +85,6 @@ class Item {
         : DateTime.parse(r["expirationDate"] as String),
     pricePerUnit: (r["pricePerUnit"] as num?)?.toDouble(),
     toBuy: ((r["toBuy"] as num?) ?? 0) != 0,
-    notifyOnLow: ((r["notifyOnLow"] as num?) ?? 0) != 0,
     notifyOnExpire: ((r["notifyOnExpire"] as num?) ?? 0) != 0,
     lowThreshold: (r["lowThreshold"] as num).toDouble(),
     createdAt: DateTime.parse(r["createdAt"] as String),

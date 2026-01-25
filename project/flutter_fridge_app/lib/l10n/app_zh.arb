@@ -70,7 +70,6 @@
   "lowThreshold": "低库存阈值",
   "expirationDate": "有效期",
   "none": "无",
-  "notifyOnLow": "库存不足时通知",
   "notifyOnExpire": "过期时通知",
   "required": "必填",
   "invalidNumber": "数字",

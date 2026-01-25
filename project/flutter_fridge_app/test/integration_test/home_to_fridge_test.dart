@@ -42,7 +42,6 @@ void main() {
         expirationDate: null,
         pricePerUnit: null,
         toBuy: false,
-        notifyOnLow: true,
         notifyOnExpire: true,
         lowThreshold: 2,
         createdAt: now,

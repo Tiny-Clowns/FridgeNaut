@@ -214,9 +214,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get none => 'Нет';
 
   @override
-  String get notifyOnLow => 'Уведомить при низком запасе';
-
-  @override
   String get notifyOnExpire => 'Уведомить при истечении';
 
   @override

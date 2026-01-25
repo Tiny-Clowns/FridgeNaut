@@ -20,7 +20,6 @@ class _ItemFormSnapshot {
   final String lowThreshold;
   final DateTime? expirationDate;
   final bool toBuy;
-  final bool notifyOnLow;
   final bool notifyOnExpire;
   final String? imagePath;
 
@@ -32,7 +31,6 @@ class _ItemFormSnapshot {
     required this.lowThreshold,
     required this.expirationDate,
     required this.toBuy,
-    required this.notifyOnLow,
     required this.notifyOnExpire,
     required this.imagePath,
   });
@@ -45,7 +43,6 @@ class _ItemFormSnapshot {
     if (lowThreshold.trim() != other.lowThreshold.trim()) return false;
     if (!_sameDateOnly(expirationDate, other.expirationDate)) return false;
     if (toBuy != other.toBuy) return false;
-    if (notifyOnLow != other.notifyOnLow) return false;
     if (notifyOnExpire != other.notifyOnExpire) return false;
     if ((imagePath ?? "") != (other.imagePath ?? "")) return false;
     return true;
@@ -85,7 +82,6 @@ class _ItemFormState extends State<ItemForm> {
 
   DateTime? _expirationDate;
   bool _toBuy = false;
-  bool _notifyOnLow = true;
   bool _notifyOnExpire = true;
   String? _imagePath;
   bool _isDuplicateName = false;
@@ -116,7 +112,6 @@ class _ItemFormState extends State<ItemForm> {
 
     _expirationDate = it?.expirationDate;
     _toBuy = it?.toBuy ?? false;
-    _notifyOnLow = it?.notifyOnLow ?? true;
     _notifyOnExpire = it?.notifyOnExpire ?? true;
     _imagePath = it?.imagePath;
 
@@ -146,7 +141,6 @@ class _ItemFormState extends State<ItemForm> {
       lowThreshold: _lowThresholdController.text,
       expirationDate: _expirationDate,
       toBuy: _toBuy,
-      notifyOnLow: _notifyOnLow,
       notifyOnExpire: _notifyOnExpire,
       imagePath: _imagePath,
     );
@@ -255,7 +249,6 @@ class _ItemFormState extends State<ItemForm> {
       expirationDate: _expirationDate,
       pricePerUnit: price,
       toBuy: _toBuy,
-      notifyOnLow: _notifyOnLow,
       notifyOnExpire: _notifyOnExpire,
       lowThreshold: low,
       createdAt: widget.existing?.createdAt ?? now,
@@ -397,11 +390,6 @@ class _ItemFormState extends State<ItemForm> {
         title: Text(l10n.plannedToBuy),
         value: _toBuy,
         onChanged: (v) => setState(() => _toBuy = v),
-      ),
-      SwitchListTile(
-        title: Text(l10n.notifyOnLow),
-        value: _notifyOnLow,
-        onChanged: (v) => setState(() => _notifyOnLow = v),
       ),
       SwitchListTile(
         title: Text(l10n.notifyOnExpire),

@@ -211,11 +211,6 @@ void main() {
 
                   // Test notification strings
                   expect(
-                    l10n.notifyOnLow.isNotEmpty,
-                    true,
-                    reason: "notifyOnLow should not be empty",
-                  );
-                  expect(
                     l10n.notifyOnExpire.isNotEmpty,
                     true,
                     reason: "notifyOnExpire should not be empty",

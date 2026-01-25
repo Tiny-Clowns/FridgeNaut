@@ -69,7 +69,6 @@
   "lowThreshold": "Niedriger Schwellenwert",
   "expirationDate": "Ablaufdatum",
   "none": "Keine",
-  "notifyOnLow": "Bei niedrigem Bestand benachrichtigen",
   "notifyOnExpire": "Bei Ablauf benachrichtigen",
   "required": "Erforderlich",
   "invalidNumber": "Zahl",

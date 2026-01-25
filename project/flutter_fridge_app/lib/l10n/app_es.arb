@@ -69,7 +69,6 @@
   "lowThreshold": "Umbral bajo",
   "expirationDate": "Fecha de caducidad",
   "none": "Ninguna",
-  "notifyOnLow": "Notificar si stock bajo",
   "notifyOnExpire": "Notificar si caducado",
   "required": "Requerido",
   "invalidNumber": "Número",

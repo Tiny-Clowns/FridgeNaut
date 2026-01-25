@@ -69,7 +69,6 @@
   "lowThreshold": "Seuil bas",
   "expirationDate": "Date d'expiration",
   "none": "Aucune",
-  "notifyOnLow": "Notifier si stock bas",
   "notifyOnExpire": "Notifier si expiré",
   "required": "Requis",
   "invalidNumber": "Nombre",

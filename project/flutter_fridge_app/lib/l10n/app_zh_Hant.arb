@@ -69,7 +69,6 @@
   "lowThreshold": "低庫存門檻",
   "expirationDate": "有效期限",
   "none": "無",
-  "notifyOnLow": "庫存不足時通知",
   "notifyOnExpire": "過期時通知",
   "required": "必填",
   "invalidNumber": "數字",

@@ -284,10 +284,6 @@
   "@none": {
     "description": "None label for empty values"
   },
-  "notifyOnLow": "Notify on low",
-  "@notifyOnLow": {
-    "description": "Notify on low stock switch label"
-  },
   "notifyOnExpire": "Notify on expire",
   "@notifyOnExpire": {
     "description": "Notify on expire switch label"

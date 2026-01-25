@@ -32,7 +32,6 @@ class HomeTestFakeRepo extends FakeRepo {
       expirationDate: null,
       pricePerUnit: null,
       toBuy: false,
-      notifyOnLow: true,
       notifyOnExpire: true,
       lowThreshold: 1.0,
       createdAt: now,

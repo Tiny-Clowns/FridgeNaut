@@ -510,12 +510,6 @@ abstract class AppLocalizations {
   /// **'None'**
   String get none;
 
-  /// Notify on low stock switch label
-  ///
-  /// In en, this message translates to:
-  /// **'Notify on low'**
-  String get notifyOnLow;
-
   /// Notify on expire switch label
   ///
   /// In en, this message translates to:

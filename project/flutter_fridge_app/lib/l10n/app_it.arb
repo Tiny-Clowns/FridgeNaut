@@ -67,7 +67,6 @@
   "lowThreshold": "Soglia bassa",
   "expirationDate": "Data di scadenza",
   "none": "Nessuna",
-  "notifyOnLow": "Notifica se scorte basse",
   "notifyOnExpire": "Notifica se scaduto",
   "required": "Richiesto",
   "invalidNumber": "Numero",

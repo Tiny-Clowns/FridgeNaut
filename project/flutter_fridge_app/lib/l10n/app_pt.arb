@@ -69,7 +69,6 @@
   "lowThreshold": "Limite baixo",
   "expirationDate": "Data de validade",
   "none": "Nenhuma",
-  "notifyOnLow": "Notificar se estoque baixo",
   "notifyOnExpire": "Notificar se vencido",
   "required": "Obrigatório",
   "invalidNumber": "Número",
