@@ -59,15 +59,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [repoProvider.overrideWithValue(fakeRepo)],
-        child: MaterialApp(
-          localizationsDelegates: const [
+        child: const MaterialApp(
+          localizationsDelegates: [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const HomePage(),
+          home: HomePage(),
         ),
       ),
     );

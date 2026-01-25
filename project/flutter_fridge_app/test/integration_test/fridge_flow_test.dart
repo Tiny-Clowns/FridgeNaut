@@ -18,15 +18,15 @@ Future<void> _pumpFridgePage(WidgetTester tester, FakeRepo repo) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [repoProvider.overrideWithValue(repo)],
-      child: MaterialApp(
-        localizationsDelegates: const [
+      child: const MaterialApp(
+        localizationsDelegates: [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const FridgePage(),
+        home: FridgePage(),
       ),
     ),
   );
