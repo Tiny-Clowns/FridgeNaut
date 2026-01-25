@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/pages/settings.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
@@ -7,7 +8,6 @@ import "package:flutter_fridge_app/main.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/reports.dart";
-import "package:flutter_fridge_app/pages/settings.dart";
 
 import "../helpers/fake_repo.dart";
 
@@ -32,10 +32,6 @@ void main() {
     await tester.tap(find.byIcon(Icons.bar_chart_outlined));
     await tester.pumpAndSettle();
     expect(find.byType(ReportsPage), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.settings_outlined));
-    await tester.pumpAndSettle();
-    expect(find.byType(SettingsPage), findsOneWidget);
   });
 
   testWidgets("Changing language shows localized Saved snackbar", (
@@ -53,6 +49,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Open Settings tab
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsOneWidget);
