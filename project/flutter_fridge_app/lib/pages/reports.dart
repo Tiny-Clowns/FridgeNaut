@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/common/utils/result.dart";
@@ -66,7 +67,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.reports)),
+      appBar: AppBar(
+        title: Text(l10n.reports),
+        actions: [AppBarPageOptionWidget(l10n: l10n)],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

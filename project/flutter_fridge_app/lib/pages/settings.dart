@@ -35,6 +35,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       const UserCalendarSettingsService();
 
   // State
+  bool _hasUnsavedChanges = false;
   bool _loading = true;
   UserCalendarSettings _calendarSettings =
       const UserCalendarSettings.defaultValues();
@@ -151,6 +152,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _expirySoonDaysController.text = expirySoonDays.toString();
     }
 
+    _hasUnsavedChanges = false;
+
     if (!mounted) return;
 
     // Show the saved message after the frame so AppLocalizations reflects
@@ -217,6 +220,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save default locale (system default)
     await ref.read(localeProvider.notifier).setLocale(null);
+
+    _hasUnsavedChanges = false;
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -381,6 +386,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               .toList(),
           onChanged: (value) {
             if (value == null) return;
+            _hasUnsavedChanges = true;
             setState(() => _themeMode = value);
           },
         ),
@@ -449,6 +455,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               .toList(),
           onChanged: (value) {
             if (value == null) return;
+            _hasUnsavedChanges = true;
             setState(() => _selectedLocale = value.locale);
           },
         ),
@@ -480,6 +487,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               .toList(),
           onChanged: (value) {
             if (value == null) return;
+            _hasUnsavedChanges = true;
             setState(() => _priceSymbol = value);
           },
         ),
@@ -531,6 +539,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
           ),
           keyboardType: TextInputType.number,
+          onChanged: (_) => _hasUnsavedChanges = true,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             TextInputFormatter.withFunction((oldValue, newValue) {
@@ -548,6 +557,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   // ---------------------------------------------------------------------------
+  // Unsaved changes popup
+  // ---------------------------------------------------------------------------
+
+  Future<bool> _shouldPop(BuildContext context, AppLocalizations l10n) async {
+    if (!_hasUnsavedChanges) return true;
+
+    // TODO: need help with translations...
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Unsaved changes"),
+        content: const Text("You have unsaved changes.\nLeave anyway?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Stay"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Leave"),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
 
@@ -562,73 +601,82 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-            child: ListView(
-              controller: widget.scrollController,
-              children: [
-                const SizedBox(height: 16),
-                // Calendar & reporting section - hidden for first release
-                // Uncomment for second version:
-                // _buildCalendarSection(context),
-                // const SizedBox(height: 24),
-                // const Divider(),
-                // const SizedBox(height: 16),
-                _buildThemeSection(context, l10n),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                _buildLanguageSection(context, l10n),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                _buildPriceSection(context, l10n),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                _buildExpirySoonSection(context, l10n),
-                const SizedBox(height: 24),
-              ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return; // already popped
+
+        bool shouldPop = await _shouldPop(context, l10n);
+        if (shouldPop && context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(l10n.settings)),
+        body: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              child: ListView(
+                controller: widget.scrollController,
+                children: [
+                  const SizedBox(height: 16),
+                  // Calendar & reporting section - hidden for first release
+                  // Uncomment for second version:
+                  // _buildCalendarSection(context),
+                  // const SizedBox(height: 24),
+                  // const Divider(),
+                  // const SizedBox(height: 16),
+                  _buildThemeSection(context, l10n),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  _buildLanguageSection(context, l10n),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  _buildPriceSection(context, l10n),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  _buildExpirySoonSection(context, l10n),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-          ),
-          // Bottom buttons: Reset (left) and Save (right)
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Reset button (bottom left)
-                ElevatedButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.restore, size: 18),
-                  label: Text(l10n.reset),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black87,
-                  ),
-                ),
-                // Save button (bottom right)
-                ElevatedButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.save, size: 18),
-                  label: Text(l10n.save),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+            // Bottom buttons: Reset (left) and Save (right)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Reset button (bottom left)
+                  ElevatedButton.icon(
+                    onPressed: _reset,
+                    icon: const Icon(Icons.restore, size: 18),
+                    label: Text(l10n.reset),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      foregroundColor: Colors.black87,
                     ),
                   ),
-                ),
-              ],
+                  // Save button (bottom right)
+                  ElevatedButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.save, size: 18),
+                    label: Text(l10n.save),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

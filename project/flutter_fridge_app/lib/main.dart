@@ -11,7 +11,6 @@ import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/pages/reports.dart";
-import "package:flutter_fridge_app/pages/settings.dart";
 
 /// Global provider for the repository.
 /// Using the interface type allows for easy testing with mock implementations.
@@ -85,14 +84,12 @@ class ShellState extends ConsumerState<Shell> {
   final ScrollController _homeScrollController = ScrollController();
   final ScrollController _fridgeScrollController = ScrollController();
   final ScrollController _reportsScrollController = ScrollController();
-  final ScrollController _settingsScrollController = ScrollController();
 
   @override
   void dispose() {
     _homeScrollController.dispose();
     _fridgeScrollController.dispose();
     _reportsScrollController.dispose();
-    _settingsScrollController.dispose();
     super.dispose();
   }
 
@@ -123,7 +120,6 @@ class ShellState extends ConsumerState<Shell> {
         scrollController: _fridgeScrollController,
       ),
       ReportsPage(scrollController: _reportsScrollController),
-      SettingsPage(scrollController: _settingsScrollController),
     ];
 
     return Scaffold(
@@ -143,10 +139,6 @@ class ShellState extends ConsumerState<Shell> {
             icon: const Icon(Icons.bar_chart_outlined),
             label: l10n.reports,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            label: l10n.settings,
-          ),
         ],
         onDestinationSelected: (i) {
           // If tapping the same tab, scroll to top
@@ -160,9 +152,6 @@ class ShellState extends ConsumerState<Shell> {
                 break;
               case 2:
                 _scrollToTop(_reportsScrollController);
-                break;
-              case 3:
-                _scrollToTop(_settingsScrollController);
                 break;
             }
             return;
