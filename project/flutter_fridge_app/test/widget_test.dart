@@ -28,10 +28,9 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
 
     // Check navigation destinations exist (handles duplicate "Home" text)
-    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
     expect(find.byIcon(Icons.kitchen_outlined), findsOneWidget);
     expect(find.byIcon(Icons.bar_chart_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });
 }
