@@ -2,14 +2,6 @@
 
 Short summary.
 
-## Why
-
-Link issues: Fixes #123
-
-## How
-
-Key changes.
-
 ## Checklist
 
 - [ ] CI green
