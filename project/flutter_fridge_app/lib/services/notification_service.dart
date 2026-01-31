@@ -47,6 +47,9 @@ abstract class NotificationService {
     // ^^ required int id, ^^ // could be item.id
     // await _notificationsPlugin.cancel(id: id);
 
+    // Fix tests, but I do not like this part
+    if (!_isInit) await initNotifications();
+
     await _notificationsPlugin.zonedSchedule(
       id: _notificationId++,
       title: title,
