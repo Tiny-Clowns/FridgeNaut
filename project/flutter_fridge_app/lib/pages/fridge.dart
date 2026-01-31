@@ -1,5 +1,4 @@
 import "package:flutter/material.dart";
-import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
@@ -8,11 +7,14 @@ import "package:flutter_fridge_app/common/utils/result.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/widgets/item_form.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_list.dart";
+import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_fridge_app/providers/item_service_provider.dart";
 
 import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
+
+import "package:flutter_fridge_app/services/notification_service.dart";
 
 class FridgePage extends ConsumerStatefulWidget {
   /// One of: AlertKeys.low, AlertKeys.expiringSoon, AlertKeys.expired,
@@ -77,6 +79,34 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     final result = await ref.read(itemsNotifierProvider.notifier).addItem(item);
     if (result is Failure) {
       _showError(result.message);
+    } else {
+      // Schedule notifications for this Item
+      // Test
+      await NotificationService.scheduleNotification(
+        title: "${item.name} Test",
+        body: "${item.name} was created around 5 seconds ago",
+        payload: null,
+
+        // show after 5 seconds
+        showTime: DateTime.now().add(const Duration(seconds: 5)),
+      );
+
+      // Expiry
+      if (item.notifyOnExpire && item.expirationDate != null) {
+        // Set notification on selected expiry date, but time to 9am
+        final notificationTime = DateTime(
+          item.expirationDate!.year,
+          item.expirationDate!.month,
+          item.expirationDate!.day,
+          9,
+        );
+        await NotificationService.scheduleNotification(
+          title: "${item.name} Expired",
+          body: "${item.name} Just expired :(",
+          payload: "${item.id};expired",
+          showTime: notificationTime,
+        );
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/models/item.dart";
+import "package:flutter_fridge_app/services/notification_service.dart";
 import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
@@ -30,6 +31,10 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final alertsAsync = ref.watch(alertsNotifierProvider);
+
+    // TODO: move to somewhere else, as this is not really good position 
+    //  and some errors accure because this functions likes "async", but it works for now :)
+    NotificationService.initNotifications();
 
     return Scaffold(
       appBar: AppBar(
