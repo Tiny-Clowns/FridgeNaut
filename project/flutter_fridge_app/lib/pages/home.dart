@@ -32,7 +32,7 @@ class HomePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final alertsAsync = ref.watch(alertsNotifierProvider);
 
-    // TODO: move to somewhere else, as this is not really good position 
+    // TODO: move to somewhere else, as this is not really good position
     //  and some errors accure because this functions likes "async", but it works for now :)
     NotificationService.initNotifications();
 
