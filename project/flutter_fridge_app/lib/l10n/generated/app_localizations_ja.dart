@@ -98,6 +98,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get prices => '価格';
 
   @override
+  String get dates => '日付';
+
+  @override
+  String get dateFormat => '日付形式';
+
+  @override
+  String get dateFormatHelperText => '日付の表示形式を選択します。';
+
+  @override
   String get priceSymbol => '価格記号';
 
   @override

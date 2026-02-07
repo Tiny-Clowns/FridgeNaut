@@ -8,9 +8,11 @@ import "package:flutter_fridge_app/domain/calendar/user_calendar_settings.dart";
 import "package:flutter_fridge_app/services/user_calendar_settings_service.dart";
 
 import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 import "package:flutter_fridge_app/domain/settings/locale_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_fridge_app/domain/settings/theme_settings.dart";
+import "package:flutter_fridge_app/providers/date_format_provider.dart";
 import "package:flutter_fridge_app/providers/effective_locale_provider.dart";
 import "package:flutter_fridge_app/providers/locale_provider.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
@@ -40,6 +42,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   UserCalendarSettings _calendarSettings =
       const UserCalendarSettings.defaultValues();
 
+  DateFormatPreference _dateFormat = defaultDateFormat;
   String _priceSymbol = defaultPriceSymbol;
   AppThemeMode _themeMode = defaultThemeMode;
   Locale? _selectedLocale; // null means system default
@@ -102,6 +105,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final priceSymbol =
         prefs.getString(priceSymbolPrefKey) ?? defaultPriceSymbol;
 
+    final dateFormat = parseDateFormatPreference(
+      prefs.getString(dateFormatPrefKey),
+    );
+
     // Load theme mode
     final themeModeString = prefs.getString(themePrefKey);
     final themeMode = themeModeString != null
@@ -119,6 +126,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     setState(() {
       _calendarSettings = calendar;
       _expirySoonDaysController.text = expirySoonDays.toString();
+      _dateFormat = dateFormat;
       _priceSymbol = priceSymbol;
       _themeMode = themeMode;
       _selectedLocale = locale;
@@ -141,6 +149,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save price symbol (and notify the whole app via provider)
     await ref.read(priceSymbolProvider.notifier).setSymbol(_priceSymbol);
+
+    // Save date format (and notify the whole app via provider)
+    await ref.read(dateFormatProvider.notifier).setDateFormat(_dateFormat);
 
     // Save theme mode (and notify the whole app via provider)
     await ref.read(themeModeProvider.notifier).setThemeMode(_themeMode);
@@ -198,6 +209,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     // Reset to default values
     setState(() {
       _calendarSettings = const UserCalendarSettings.defaultValues();
+      _dateFormat = defaultDateFormat;
       _priceSymbol = defaultPriceSymbol;
       _themeMode = defaultThemeMode;
       _selectedLocale = null; // Reset to system default
@@ -214,6 +226,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // Save default price symbol
     await ref.read(priceSymbolProvider.notifier).setSymbol(defaultPriceSymbol);
+
+    // Save default date format
+    await ref
+        .read(dateFormatProvider.notifier)
+        .setDateFormat(defaultDateFormat);
 
     // Save default theme mode
     await ref.read(themeModeProvider.notifier).setThemeMode(defaultThemeMode);
@@ -495,6 +512,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  Widget _buildDateFormatSection(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.dates, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<DateFormatPreference>(
+          initialValue: _dateFormat,
+          decoration: InputDecoration(
+            labelText: l10n.dateFormat,
+            helperText: l10n.dateFormatHelperText,
+          ),
+          items: dateFormatOptions
+              .map(
+                (o) => DropdownMenuItem<DateFormatPreference>(
+                  value: o.value,
+                  child: Text(o.label),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            _hasUnsavedChanges = true;
+            setState(() => _dateFormat = value);
+          },
+        ),
+      ],
+    );
+  }
+
   String _getCurrencyLabel(String labelKey, AppLocalizations l10n) {
     switch (labelKey) {
       case "britishPound":
@@ -630,6 +677,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const Divider(),
                   const SizedBox(height: 16),
                   _buildLanguageSection(context, l10n),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  _buildDateFormatSection(context, l10n),
                   const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 16),

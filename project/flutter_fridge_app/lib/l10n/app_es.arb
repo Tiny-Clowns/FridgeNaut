@@ -56,6 +56,18 @@
   "expiryDate": "Fecha de caducidad",
   "lowStockThreshold": "Umbral de stock bajo",
   "delete": "Eliminar",
+  "dates": "Fechas",
+  "@dates": {
+    "description": "Dates section title"
+  },
+  "dateFormat": "Formato de fecha",
+  "@dateFormat": {
+    "description": "Date format setting label"
+  },
+  "dateFormatHelperText": "Elige cómo se muestran las fechas.",
+  "@dateFormatHelperText": {
+    "description": "Date format setting helper text"
+  },
   "confirmDelete": "Confirmar eliminación",
   "confirmDeleteMessage": "¿Estás seguro de que quieres eliminar este artículo?",
   "noItems": "No se encontraron artículos",

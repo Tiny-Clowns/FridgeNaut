@@ -122,6 +122,18 @@
   "@prices": {
     "description": "Prices section title"
   },
+  "dates": "Dates",
+  "@dates": {
+    "description": "Dates section title"
+  },
+  "dateFormat": "Date format",
+  "@dateFormat": {
+    "description": "Date format setting label"
+  },
+  "dateFormatHelperText": "Choose how dates are displayed.",
+  "@dateFormatHelperText": {
+    "description": "Date format setting helper text"
+  },
   "priceSymbol": "Price symbol",
   "@priceSymbol": {
     "description": "Price symbol setting label"

@@ -4,6 +4,7 @@ import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/common/widgets/confirm_cancel_form.dart";
 
 import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 
@@ -52,12 +53,14 @@ class _ItemFormSnapshot {
 class ItemForm extends StatefulWidget {
   final Item? existing;
   final String currencySymbol;
+  final DateFormatPreference dateFormat;
   final List<Item>? allItems;
 
   const ItemForm({
     super.key,
     this.existing,
     this.currencySymbol = defaultPriceSymbol,
+    this.dateFormat = defaultDateFormat,
     this.allItems,
   });
 
@@ -199,7 +202,9 @@ class _ItemFormState extends State<ItemForm> {
 
   String _expirationLabel(AppLocalizations l10n) {
     final date = _expirationDate;
-    return date == null ? l10n.none : formatLocalIsoDate(date);
+    return date == null
+        ? l10n.none
+        : formatLocalDate(date, format: widget.dateFormat);
   }
 
   bool get _isPastExpiry {

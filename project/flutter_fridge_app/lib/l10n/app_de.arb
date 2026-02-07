@@ -56,6 +56,18 @@
   "expiryDate": "Ablaufdatum",
   "lowStockThreshold": "Schwelle für niedrigen Bestand",
   "delete": "Löschen",
+  "dates": "Daten",
+  "@dates": {
+    "description": "Dates section title"
+  },
+  "dateFormat": "Datumsformat",
+  "@dateFormat": {
+    "description": "Date format setting label"
+  },
+  "dateFormatHelperText": "Wählen Sie, wie Datumsangaben angezeigt werden.",
+  "@dateFormatHelperText": {
+    "description": "Date format setting helper text"
+  },
   "confirmDelete": "Löschen bestätigen",
   "confirmDeleteMessage": "Sind Sie sicher, dass Sie diesen Artikel löschen möchten?",
   "noItems": "Keine Artikel gefunden",

@@ -98,6 +98,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get prices => '价格';
 
   @override
+  String get dates => '日期';
+
+  @override
+  String get dateFormat => '日期格式';
+
+  @override
+  String get dateFormatHelperText => '选择日期显示格式。';
+
+  @override
   String get priceSymbol => '价格符号';
 
   @override
@@ -383,6 +392,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get prices => '价格';
 
   @override
+  String get dates => '日期';
+
+  @override
+  String get dateFormat => '日期格式';
+
+  @override
+  String get dateFormatHelperText => '选择日期显示格式。';
+
+  @override
   String get priceSymbol => '价格符号';
 
   @override
@@ -666,6 +684,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get prices => '價格';
+
+  @override
+  String get dates => '日期';
+
+  @override
+  String get dateFormat => '日期格式';
+
+  @override
+  String get dateFormatHelperText => '選擇日期顯示格式。';
 
   @override
   String get priceSymbol => '價格符號';

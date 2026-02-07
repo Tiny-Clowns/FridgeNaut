@@ -98,6 +98,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get prices => 'Цены';
 
   @override
+  String get dates => 'Даты';
+
+  @override
+  String get dateFormat => 'Формат даты';
+
+  @override
+  String get dateFormatHelperText => 'Выберите, как отображаются даты.';
+
+  @override
   String get priceSymbol => 'Символ валюты';
 
   @override

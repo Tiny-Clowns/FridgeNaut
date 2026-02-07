@@ -2,6 +2,7 @@ import "dart:io";
 
 import "package:flutter/material.dart";
 import "package:flutter_fridge_app/common/utils/date_time_utils.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/common/extensions/string_extensions.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
@@ -37,6 +38,7 @@ class FridgeItemTileData {
     Item item, {
     required ItemStatus status,
     required String currencySymbol,
+    required DateFormatPreference dateFormat,
   }) {
     final price = item.pricePerUnit;
     final exp = item.expirationDate;
@@ -47,7 +49,9 @@ class FridgeItemTileData {
       priceText: price != null
           ? "$currencySymbol${price.toStringAsFixed(2)} / ${item.unit}"
           : null,
-      expiryText: exp != null ? "exp ${formatLocalIsoDate(exp)}" : null,
+      expiryText: exp != null
+          ? "exp ${formatLocalDate(exp, format: dateFormat)}"
+          : null,
       isQuantityLow: status.isLow,
       isExpired: status.isExpired,
       isExpiringSoon: status.isExpiringSoon,
