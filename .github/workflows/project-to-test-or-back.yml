@@ -245,17 +245,58 @@ jobs:
               const itemId = add?.addProjectV2ItemById?.item?.id;
               if (!itemId) continue;
 
-              await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
-                updateProjectV2ItemFieldValue(
-                  input:{
-                    projectId:$p,
-                    itemId:$i,
-                    fieldId:$f,
-                    value:{singleSelectOptionId:$o}
+              // Read current Status value for the item
+              const curQ = await github.graphql(`query($id:ID!){
+                node(id:$id){
+                  ... on ProjectV2Item {
+                    fieldValues(first:50){
+                      nodes{
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                          field { ... on ProjectV2SingleSelectField { name id } }
+                        }
+                      }
+                    }
                   }
-                ){
-                  clientMutationId
                 }
-              }`,
-              { p: projectId, i: itemId, f: fieldId, o: targetId });
+              }`, { id: itemId }).catch(()=>null);
+
+              const cur = curQ?.node?.fieldValues?.nodes?.find(x => x.field?.name === "Status")?.name || null;
+
+              if (allSucceeded) {
+                const eligible = new Set(["In Progress", "In Review", "To Do"]);
+                if (!cur || !eligible.has(cur)) {
+                  core.info(`${contentId}: current status '${cur}' not eligible for To Test, skipping.`);
+                  continue;
+                }
+
+                await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$p,
+                      itemId:$i,
+                      fieldId:$f,
+                      value:{singleSelectOptionId:$o}
+                    }
+                  ){
+                    clientMutationId
+                  }
+                }`,
+                { p: projectId, i: itemId, f: fieldId, o: toTestId });
+              } else {
+                // On failure, move to To Fix regardless of current status
+                await github.graphql(`mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$p,
+                      itemId:$i,
+                      fieldId:$f,
+                      value:{singleSelectOptionId:$o}
+                    }
+                  ){
+                    clientMutationId
+                  }
+                }`,
+                { p: projectId, i: itemId, f: fieldId, o: toFixId });
+              }
             }
