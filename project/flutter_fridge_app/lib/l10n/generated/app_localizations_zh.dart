@@ -9,7 +9,7 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => 'FridgeNaut';
+  String get appTitle => 'Fridge Naut';
 
   @override
   String get home => '首页';
@@ -294,7 +294,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   AppLocalizationsZhHans() : super('zh_Hans');
 
   @override
-  String get appTitle => 'FridgeNaut';
+  String get appTitle => 'Fridge Naut';
 
   @override
   String get home => '首页';
@@ -579,7 +579,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
 
   @override
-  String get appTitle => 'FridgeNaut';
+  String get appTitle => 'Fridge Naut';
 
   @override
   String get home => '首頁';
