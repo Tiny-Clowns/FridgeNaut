@@ -9,7 +9,7 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'FridgeNaut';
+  String get appTitle => 'Fridge Naut';
 
   @override
   String get home => 'Startseite';

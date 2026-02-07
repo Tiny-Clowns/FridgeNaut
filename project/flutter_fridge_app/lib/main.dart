@@ -35,7 +35,7 @@ class App extends ConsumerWidget {
         .maybeWhen(data: (l) => l, orElse: () => null);
 
     return MaterialApp(
-      title: "FridgeNaut",
+      title: "Fridge Naut",
       theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
       darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
       themeMode: themeMode,

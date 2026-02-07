@@ -117,7 +117,7 @@ abstract class AppLocalizations {
   /// The title of the application
   ///
   /// In en, this message translates to:
-  /// **'FridgeNaut'**
+  /// **'Fridge Naut'**
   String get appTitle;
 
   /// Home navigation label
