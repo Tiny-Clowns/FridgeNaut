@@ -3,6 +3,7 @@ import "package:flutter_fridge_app/common/widgets/search_filter_list.dart";
 import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:flutter_fridge_app/domain/inventory/fridge_filters.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 import "package:flutter_fridge_app/l10n/generated/app_localizations.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_tile.dart";
@@ -11,6 +12,7 @@ class FridgeItemList extends StatelessWidget {
   final List<Item> items;
   final int expirySoonDays;
   final String currencySymbol;
+  final DateFormatPreference dateFormat;
   final Future<void> Function() onRefresh;
   final Future<void> Function(Item item) onEdit;
   final Future<void> Function(Item item) onIncrement;
@@ -28,6 +30,7 @@ class FridgeItemList extends StatelessWidget {
     required this.items,
     required this.expirySoonDays,
     required this.currencySymbol,
+    required this.dateFormat,
     required this.onRefresh,
     required this.onEdit,
     required this.onIncrement,
@@ -64,6 +67,7 @@ class FridgeItemList extends StatelessWidget {
       it,
       status: status,
       currencySymbol: currencySymbol,
+      dateFormat: dateFormat,
     );
 
     return FridgeItemTile(

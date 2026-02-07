@@ -288,6 +288,24 @@ abstract class AppLocalizations {
   /// **'Prices'**
   String get prices;
 
+  /// Dates section title
+  ///
+  /// In en, this message translates to:
+  /// **'Dates'**
+  String get dates;
+
+  /// Date format setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Date format'**
+  String get dateFormat;
+
+  /// Date format setting helper text
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how dates are displayed.'**
+  String get dateFormatHelperText;
+
   /// Price symbol setting label
   ///
   /// In en, this message translates to:

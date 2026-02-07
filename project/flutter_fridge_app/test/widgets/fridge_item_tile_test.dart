@@ -5,6 +5,7 @@ import "package:flutter_test/flutter_test.dart";
 import "package:flutter_fridge_app/widgets/fridge_item_tile.dart";
 import "package:flutter_fridge_app/domain/item_status.dart";
 import "package:flutter_fridge_app/models/item.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 
 Item _makeItem({
   String name = "Test Item",
@@ -69,6 +70,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.displayName, "Milk Carton");
@@ -81,6 +83,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.quantityText, "5.0 liters");
@@ -93,6 +96,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "€",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.priceText, "€3.50 / kg");
@@ -105,6 +109,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.priceText, isNull);
@@ -118,6 +123,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.expiryText, contains("exp"));
@@ -131,6 +137,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.expiryText, isNull);
@@ -143,6 +150,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.isQuantityLow, isTrue);
@@ -155,6 +163,7 @@ void main() {
         item,
         status: status,
         currencySymbol: "\$",
+        dateFormat: defaultDateFormat,
       );
 
       expect(data.isZeroQuantity, isTrue);

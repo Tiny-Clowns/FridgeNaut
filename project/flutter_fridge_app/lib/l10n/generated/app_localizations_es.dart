@@ -99,6 +99,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get prices => 'Precios';
 
   @override
+  String get dates => 'Fechas';
+
+  @override
+  String get dateFormat => 'Formato de fecha';
+
+  @override
+  String get dateFormatHelperText => 'Elige cómo se muestran las fechas.';
+
+  @override
   String get priceSymbol => 'Símbolo de precio';
 
   @override

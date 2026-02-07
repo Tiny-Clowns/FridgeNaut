@@ -11,7 +11,9 @@ import "package:flutter_fridge_app/widgets/appbar_page_option_widget.dart";
 import "package:flutter_fridge_app/providers/item_service_provider.dart";
 
 import "package:flutter_fridge_app/domain/settings/expiry_settings.dart";
+import "package:flutter_fridge_app/domain/settings/date_format_settings.dart";
 import "package:flutter_fridge_app/domain/settings/price_symbol_settings.dart";
+import "package:flutter_fridge_app/providers/date_format_provider.dart";
 import "package:flutter_fridge_app/providers/price_symbol_provider.dart";
 
 import "package:flutter_fridge_app/services/notification_service.dart";
@@ -55,6 +57,12 @@ class _FridgePageState extends ConsumerState<FridgePage> {
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
   }
 
+  DateFormatPreference _dateFormatNow() {
+    return ref
+        .read(dateFormatProvider)
+        .maybeWhen(data: (v) => v, orElse: () => defaultDateFormat);
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -71,8 +79,11 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     final Item? item = await showModalBottomSheet<Item>(
       context: context,
       isScrollControlled: true,
-      builder: (_) =>
-          ItemForm(currencySymbol: _currencySymbolNow(), allItems: items),
+      builder: (_) => ItemForm(
+        currencySymbol: _currencySymbolNow(),
+        dateFormat: _dateFormatNow(),
+        allItems: items,
+      ),
     );
     if (item == null) return;
 
@@ -118,6 +129,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
       builder: (_) => ItemForm(
         existing: old,
         currencySymbol: _currencySymbolNow(),
+        dateFormat: _dateFormatNow(),
         allItems: items,
       ),
     );
@@ -156,6 +168,9 @@ class _FridgePageState extends ConsumerState<FridgePage> {
     final currencySymbol = ref
         .watch(priceSymbolProvider)
         .maybeWhen(data: (v) => v, orElse: () => defaultPriceSymbol);
+    final dateFormat = ref
+        .watch(dateFormatProvider)
+        .maybeWhen(data: (v) => v, orElse: () => defaultDateFormat);
 
     return Scaffold(
       appBar: AppBar(
@@ -169,6 +184,7 @@ class _FridgePageState extends ConsumerState<FridgePage> {
           items: items,
           expirySoonDays: _expirySoonDays,
           currencySymbol: currencySymbol,
+          dateFormat: dateFormat,
           initialFilterKey: widget.initialFilter,
           scrollController: widget.scrollController,
           onRefresh: () => ref.read(itemsNotifierProvider.notifier).refresh(),
