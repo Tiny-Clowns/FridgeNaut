@@ -11,6 +11,7 @@ import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/pages/home.dart";
 import "package:flutter_fridge_app/pages/fridge.dart";
 import "package:flutter_fridge_app/pages/reports.dart";
+import "package:flutter_fridge_app/widgets/receipt_scan_button.dart";
 
 /// Global provider for the repository.
 /// Using the interface type allows for easy testing with mock implementations.
@@ -124,6 +125,7 @@ class ShellState extends ConsumerState<Shell> {
 
     return Scaffold(
       body: pages[_idx],
+      floatingActionButton: const ReceiptScanButton(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _idx,
         destinations: [

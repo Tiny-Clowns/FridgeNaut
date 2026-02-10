@@ -19,3 +19,18 @@ Scan on your phone:
 Scan on your phone:
 
 ![Test APK QR](docs/qr-test-apk.png)
+
+## Features
+
+### Receipt Scanning (On-Device OCR)
+
+FridgeNaut supports on-device receipt scanning powered by Google ML Kit Text Recognition.  
+All processing runs locally — **no internet required**.
+
+#### Running on Android
+
+The app requests camera permission at runtime. The following permission is declared in `AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.CAMERA"/>
+```

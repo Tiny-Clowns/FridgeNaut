@@ -53,4 +53,14 @@ abstract class IRepo {
   /// Returns report data (total cost and usage) for the given range.
   /// Returns a [Result] with the data or an error.
   Future<Result<Map<String, num>>> reportLocal(ReportRange range);
+
+  // ---------- Receipts ----------
+
+  /// Saves a scanned receipt to the local database.
+  /// Returns a [Result] indicating success or failure.
+  Future<Result<void>> saveReceipt(ScannedReceipt receipt);
+
+  /// Returns all saved receipts, most recent first.
+  /// Returns a [Result] with the list or an error.
+  Future<Result<List<ScannedReceipt>>> allReceipts();
 }

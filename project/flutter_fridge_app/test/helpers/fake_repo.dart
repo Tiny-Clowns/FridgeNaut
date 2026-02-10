@@ -4,6 +4,7 @@ import "package:flutter_fridge_app/domain/inventory/alert_keys.dart";
 import "package:flutter_fridge_app/domain/reports/report_range.dart";
 import "package:flutter_fridge_app/models/item.dart";
 import "package:flutter_fridge_app/models/inventory_event.dart";
+import "package:flutter_fridge_app/models/scanned_receipt.dart";
 
 /// A fake repository for testing that implements IRepo via Repo.
 /// All data is stored in memory and can be pre-populated via the constructor.
@@ -19,7 +20,9 @@ class FakeRepo extends Repo {
     Map<String, num>? reportData,
   }) : _items = items ?? [],
        _alerts = alerts ?? emptyAlertBuckets<Item>(),
-       _reportData = reportData ?? {"totalCost": 0, "totalUsage": 0};
+       _reportData =
+           reportData ??
+           {"totalCost": 0, "totalUsage": 0, "usedCost": 0, "wasteCost": 0};
 
   /// Access to internal items list for test assertions.
   List<Item> get items => _items;
@@ -80,5 +83,27 @@ class FakeRepo extends Repo {
   @override
   Future<Result<Map<String, num>>> reportLocal(ReportRange range) async {
     return Success(_reportData);
+  }
+
+  // ---------- Receipts ----------
+
+  final List<ScannedReceipt> _receipts = [];
+
+  /// Access to internal receipts list for test assertions.
+  List<ScannedReceipt> get receipts => _receipts;
+
+  @override
+  Future<Result<void>> saveReceipt(ScannedReceipt receipt) async {
+    _receipts.add(receipt);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<List<ScannedReceipt>>> allReceipts() async {
+    return Success(
+      List<ScannedReceipt>.unmodifiable(
+        _receipts..sort((a, b) => b.scannedAt.compareTo(a.scannedAt)),
+      ),
+    );
   }
 }

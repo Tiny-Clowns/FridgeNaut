@@ -6,6 +6,7 @@ import "package:flutter_fridge_app/models/inventory_event.dart";
 import "package:flutter_fridge_app/services/item_service.dart";
 import "package:flutter_fridge_app/data/repository_interface.dart";
 import "package:flutter_fridge_app/domain/reports/report_range.dart";
+import "package:flutter_fridge_app/models/scanned_receipt.dart";
 
 /// Mock repository for testing ItemService.
 class MockRepo implements IRepo {
@@ -77,6 +78,16 @@ class MockRepo implements IRepo {
   @override
   Future<Result<Map<String, num>>> reportLocal(ReportRange range) async {
     return const Success({"totalCost": 0, "totalUsage": 0});
+  }
+
+  @override
+  Future<Result<void>> saveReceipt(ScannedReceipt receipt) async {
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<List<ScannedReceipt>>> allReceipts() async {
+    return const Success([]);
   }
 }
 

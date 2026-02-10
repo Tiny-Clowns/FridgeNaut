@@ -226,4 +226,34 @@ class Repo implements IRepo {
       return Failure("Failed to generate report", error: e);
     }
   }
+
+  // ---------- Receipts ----------
+
+  @override
+  Future<Result<void>> saveReceipt(ScannedReceipt receipt) async {
+    try {
+      final db = await _db;
+      await db.insert(
+        "receipts",
+        receipt.toDb(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return const Success(null);
+    } catch (e, st) {
+      _logError("saveReceipt", e, st);
+      return Failure("Failed to save receipt", error: e);
+    }
+  }
+
+  @override
+  Future<Result<List<ScannedReceipt>>> allReceipts() async {
+    try {
+      final db = await _db;
+      final rows = await db.query("receipts", orderBy: "scannedAt DESC");
+      return Success(rows.map((r) => ScannedReceipt.fromDb(r)).toList());
+    } catch (e, st) {
+      _logError("allReceipts", e, st);
+      return Failure("Failed to load receipts", error: e);
+    }
+  }
 }

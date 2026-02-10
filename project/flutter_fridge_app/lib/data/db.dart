@@ -6,7 +6,7 @@ import "package:sqflite/sqflite.dart";
 
 // Local database
 class AppDb {
-  static const _dbVersion = 2;
+  static const _dbVersion = 3;
   static Database? _db;
   static Future<Database> get instance async {
     if (_db != null) return _db!;
@@ -56,6 +56,15 @@ class AppDb {
       CREATE TABLE meta(
         k TEXT PRIMARY KEY,
         v TEXT NOT NULL
+      );
+    """);
+
+    await db.execute("""
+      CREATE TABLE receipts(
+        id TEXT PRIMARY KEY,
+        imagePath TEXT NOT NULL,
+        ocrText TEXT NOT NULL,
+        scannedAt TEXT NOT NULL
       );
     """);
   }
